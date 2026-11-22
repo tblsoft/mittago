@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>mittago</title>
 <meta name="description" content="Was gibt's heute in Erfurts Kantinen? Alle Speisepläne an einem Ort.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2c7a4b" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111814" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-title" content="mittago">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&display=swap">
@@ -190,10 +197,42 @@ footer a { color: inherit; }
     "rind": ["beef", "Rind"], "lamm": ["beef", "Lamm"], "wild": ["beef", "Wild"], "unbekannt": ["unk", "noch offen"]
   };
   var ORDER = ["tks", "sparkasse", "bergstrom", "stw-fh", "stw-uni", "stw-schlueter", "stw-leipziger"];
+  // Kurze IDs für die URL (Lesezeichen), Namen für den QSC-Filter f.kantine
+  var KANTINE = {
+    "tks": "Casino im Justizzentrum", "sparkasse": "Sparkasse Kantine", "bergstrom": "Kantine am Bergstrom",
+    "stw-fh": "Mensa Altonaer Straße (FH)", "stw-uni": "Mensa Nordhäuser Straße (Uni)",
+    "stw-schlueter": "Cafeteria Schlüterstraße (FH)", "stw-leipziger": "Cafeteria Leipziger Straße (FH)"
+  };
+  function kantineId(name) { for (var k in KANTINE) if (KANTINE[k] === name) return k; return null; }
 
-  var state = { day: null, merkmal: null, kantinen: [], q: "", tage: [], seq: 0 };
-  try { state.merkmal = localStorage.getItem("mittago.merkmal") || null; } catch (e) {}
-  try { state.kantinen = JSON.parse(localStorage.getItem("mittago.kantinen") || "[]") || []; } catch (e) { state.kantinen = []; }
+  var state = { day: null, merkmal: null, kantinen: [], q: "", tage: [], seq: 0, urlDay: null };
+
+  // Zustand aus der URL (Lesezeichen) – sonst die letzte Auswahl dieses Browsers
+  (function readState() {
+    var p = new URLSearchParams(location.search);
+    var hatUrl = p.has("art") || p.has("k") || p.has("q") || p.has("tag");
+    if (hatUrl) {
+      state.merkmal = p.get("art") || null;
+      state.kantinen = p.getAll("k").map(function (id) { return KANTINE[id]; }).filter(Boolean);
+      state.q = (p.get("q") || "").trim();
+      state.urlDay = p.get("tag"); // "woche" oder JJJJ-MM-TT; fehlt = heute
+    } else {
+      try { state.merkmal = localStorage.getItem("mittago.merkmal") || null; } catch (e) {}
+      try { state.kantinen = JSON.parse(localStorage.getItem("mittago.kantinen") || "[]") || []; } catch (e) { state.kantinen = []; }
+    }
+  })();
+
+  // Auswahl in die URL schreiben, damit Lesezeichen und geteilte Links sie mitnehmen
+  function writeUrl() {
+    var p = new URLSearchParams();
+    if (state.q) p.set("q", state.q);
+    if (state.day === "alle") p.set("tag", "woche");
+    else if (state.day && state.day !== state.defaultDay) p.set("tag", state.day);
+    if (state.merkmal) p.set("art", state.merkmal);
+    state.kantinen.forEach(function (n) { var id = kantineId(n); if (id) p.append("k", id); });
+    var qs = p.toString();
+    history.replaceState(null, "", location.pathname + (qs ? "?" + qs : ""));
+  }
 
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
@@ -300,6 +339,7 @@ footer a { color: inherit; }
 
   function load() {
     var my = ++state.seq;
+    writeUrl();
     $("status").className = "status";
     if (!$("list").innerHTML) $("status").textContent = "Lade …";
     $("list").setAttribute("aria-busy", "true");
@@ -321,7 +361,12 @@ footer a { color: inherit; }
       if (!state.tage.length) { $("status").textContent = "Gerade sind keine Speisepläne verfügbar."; return; }
       var now = new Date(), ab = iso(now);
       if (now.getHours() >= 14) { var t = new Date(now); t.setDate(t.getDate() + 1); ab = iso(t); }
-      state.day = state.tage.filter(function (s) { return s >= ab; })[0] || state.tage[state.tage.length - 1];
+      state.defaultDay = state.tage.filter(function (s) { return s >= ab; })[0] || state.tage[state.tage.length - 1];
+      state.day = state.defaultDay;
+      // Tag aus dem Lesezeichen nur, wenn es ihn noch gibt (vergangene Tage -> heute)
+      if (state.urlDay === "woche" || state.q) state.day = "alle";
+      else if (state.urlDay && state.tage.indexOf(state.urlDay) >= 0) state.day = state.urlDay;
+      if (state.q) { $("q").value = state.q; $("clear").hidden = false; }
       load();
     }).catch(function (e) {
       $("status").textContent = "Speisepläne konnten nicht geladen werden (" + e.message + "). Seite neu laden oder später versuchen.";
