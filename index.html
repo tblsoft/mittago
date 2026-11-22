@@ -102,7 +102,11 @@ h1 span { color: var(--accent); }
   border-radius: 999px; padding: 4px 11px; cursor: pointer;
 }
 .chip[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--bg); }
-.kt[aria-pressed="false"] { color: var(--muted); text-decoration: line-through; opacity: 0.7; }
+.kt[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.chip .cnt, .kt .cnt { font-variant-numeric: tabular-nums; opacity: 0.6; font-size: 0.8em; margin-left: 2px; }
+.chip:disabled { opacity: 0.4; cursor: default; }
+.chip.reset { border-style: dashed; }
+#list[aria-busy="true"] { opacity: 0.55; transition: opacity .15s; }
 
 .status { color: var(--muted); font-size: 0.9rem; min-height: 1.4em; }
 .status.err { color: var(--pork); }
@@ -161,7 +165,7 @@ footer a { color: inherit; }
   <main id="list" aria-live="polite"></main>
 
   <footer>
-    <div>Daten aus den Speiseplänen der Kantinen, täglich aktualisiert. Angaben ohne Gewähr. Preise: Gästepreis, Details am Gericht.</div>
+    <div>Daten aus den Speiseplänen der Kantinen. Angaben ohne Gewähr. Preise: Gästepreis, Details am Gericht. Keine Kantine gewählt = alle.</div>
     <div>„vermutlich vegetarisch“ heißt: im Namen kein Fleisch erkannt. Allergene bitte vor Ort prüfen.</div>
     <div>Suche powered by Quasiris Search Cloud.</div>
   </footer>
@@ -170,15 +174,15 @@ footer a { color: inherit; }
 <script>
 (function () {
   "use strict";
+  // Alle Filter laufen über QSC: f.tag, f.merkmale, f.kantine. Der Browser gruppiert nur noch die Anzeige.
   var API = "https://qsc-dev.quasiris.de/api/v1/search/tbl/mittago";
   var TAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
-  var ARTEN = [
-    { id: "alle", label: "Alle" },
-    { id: "veg", label: "Vegetarisch", test: function (a) { return a === "vegan" || a === "vegetarisch" || a === "vegetarisch?"; } },
-    { id: "vegan", label: "Vegan", test: function (a) { return a === "vegan"; } },
-    { id: "fisch", label: "Fisch", test: function (a) { return a === "fisch"; } },
-    { id: "gefluegel", label: "Geflügel", test: function (a) { return a === "gefluegel"; } },
-    { id: "ohne-schwein", label: "Ohne Schwein", test: function (a) { return a !== "schwein"; } }
+  var MERKMALE = [
+    { id: "vegetarisch", label: "Vegetarisch" },
+    { id: "vegan", label: "Vegan" },
+    { id: "fisch", label: "Fisch" },
+    { id: "gefluegel", label: "Geflügel" },
+    { id: "ohne-schwein", label: "Ohne Schwein" }
   ];
   var TAG = {
     "vegan": ["veg", "vegan"], "vegetarisch": ["veg", "vegetarisch"], "vegetarisch?": ["veg", "vermutlich vegetarisch"],
@@ -187,68 +191,72 @@ footer a { color: inherit; }
   };
   var ORDER = ["tks", "sparkasse", "bergstrom", "stw-fh", "stw-uni", "stw-schlueter", "stw-leipziger"];
 
-  var state = { all: [], hits: null, day: null, art: "alle", off: {}, q: "" };
-  try { state.off = JSON.parse(localStorage.getItem("mittago.off") || "{}") || {}; } catch (e) { state.off = {}; }
-  try { state.art = localStorage.getItem("mittago.art") || "alle"; } catch (e) {}
+  var state = { day: null, merkmal: null, kantinen: [], q: "", tage: [], seq: 0 };
+  try { state.merkmal = localStorage.getItem("mittago.merkmal") || null; } catch (e) {}
+  try { state.kantinen = JSON.parse(localStorage.getItem("mittago.kantinen") || "[]") || []; } catch (e) { state.kantinen = []; }
 
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
   function iso(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
   function fmtDay(s) { var p = s.split("-"); return p[2] + "." + p[1] + "."; }
   function euro(n) { return n == null ? "" : n.toFixed(2).replace(".", ",") + " €"; }
+  function save() {
+    try { localStorage.setItem("mittago.merkmal", state.merkmal || ""); localStorage.setItem("mittago.kantinen", JSON.stringify(state.kantinen)); } catch (e) {}
+  }
 
-  function fetchDocs(q) {
-    var url = API + "?rows=500&q=" + encodeURIComponent(q || "*");
-    return fetch(url).then(function (r) {
+  // Eine Anfrage an QSC mit allen aktiven Filtern
+  function query(opts) {
+    var p = ["q=" + encodeURIComponent(opts.q || "*"), "rows=" + (opts.rows == null ? 200 : opts.rows)];
+    if (opts.tag) p.push("f.tag=" + encodeURIComponent(opts.tag));
+    if (opts.merkmal) p.push("f.merkmale=" + encodeURIComponent(opts.merkmal));
+    (opts.kantinen || []).forEach(function (k) { p.push("f.kantine=" + encodeURIComponent(k)); });
+    return fetch(API + "?" + p.join("&")).then(function (r) {
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function (j) {
-      var res = j && j.result && j.result.mittago;
-      return (res && res.documents || []).map(function (d) { return d.document; });
+      var res = (j && j.result && j.result.mittago) || {};
+      var facets = {};
+      (res.facets || []).forEach(function (f) { facets[f.id] = f.values || []; });
+      return { docs: (res.documents || []).map(function (d) { return d.document; }), total: res.total || 0, facets: facets };
     });
   }
 
-  function days() {
-    var set = {};
-    state.all.forEach(function (d) { set[d.datum] = 1; });
-    return Object.keys(set).sort();
+  function count(facet, value) {
+    for (var i = 0; i < (facet || []).length; i++) if (facet[i].value === value) return facet[i].count;
+    return 0;
   }
 
-  function pickDefaultDay(list) {
-    var now = new Date(), today = iso(now);
-    // nach 14 Uhr lieber den nächsten Tag zeigen
-    if (now.getHours() >= 14) { var t = new Date(now); t.setDate(t.getDate() + 1); today = iso(t); }
-    for (var i = 0; i < list.length; i++) if (list[i] >= today) return list[i];
-    return list[list.length - 1] || null;
-  }
-
-  function kantinen() {
-    var seen = {}, out = [];
-    state.all.forEach(function (d) { if (!seen[d.kantine_id]) { seen[d.kantine_id] = 1; out.push({ id: d.kantine_id, name: d.kantine, quelle: d.quelle, adresse: d.adresse }); } });
-    out.sort(function (a, b) { return ORDER.indexOf(a.id) - ORDER.indexOf(b.id); });
-    return out;
-  }
-
-  function renderControls() {
-    var dl = days(), now = iso(new Date());
-    $("days").innerHTML = dl.map(function (s) {
+  function renderDays() {
+    var now = iso(new Date());
+    var all = '<button type="button" class="day" data-day="alle" aria-pressed="' + (state.day === "alle") + '"><b>Woche</b><small>alle Tage</small></button>';
+    $("days").innerHTML = state.tage.map(function (s) {
       var d = new Date(s + "T12:00:00"), name = s === now ? "Heute" : TAGE[d.getDay()];
-      return '<button type="button" class="day" data-day="' + s + '" aria-pressed="' + (s === state.day && !state.q) + '"><b>' + name + '</b><small>' + fmtDay(s) + "</small></button>";
-    }).join("");
-    $("arten").innerHTML = '<span class="lbl">Art</span>' + ARTEN.map(function (a) {
-      return '<button type="button" class="chip" data-art="' + a.id + '" aria-pressed="' + (a.id === state.art) + '">' + a.label + "</button>";
-    }).join("");
-    $("kantinen").innerHTML = '<span class="lbl">Kantinen</span>' + kantinen().map(function (k) {
-      return '<button type="button" class="kt" data-k="' + esc(k.id) + '" aria-pressed="' + !state.off[k.id] + '" title="' + esc(k.adresse) + '">' + esc(k.name) + "</button>";
-    }).join("");
+      return '<button type="button" class="day" data-day="' + s + '" aria-pressed="' + (s === state.day) + '"><b>' + name + '</b><small>' + fmtDay(s) + "</small></button>";
+    }).join("") + all;
+  }
+
+  function renderFilters(facets) {
+    var m = facets.merkmale || [];
+    $("arten").innerHTML = '<span class="lbl">Art</span><button type="button" class="chip" data-merkmal="" aria-pressed="' + !state.merkmal + '">Alle</button>' +
+      MERKMALE.map(function (x) {
+        var n = count(m, x.id);
+        return '<button type="button" class="chip" data-merkmal="' + x.id + '" aria-pressed="' + (state.merkmal === x.id) + '"' + (n || state.merkmal === x.id ? "" : " disabled") + ">" +
+          x.label + ' <span class="cnt">' + n + "</span></button>";
+      }).join("");
+    var k = (facets.kantine || []).slice();
+    // ausgewählte Kantinen auch zeigen, wenn sie gerade 0 Treffer haben
+    state.kantinen.forEach(function (name) { if (!k.some(function (v) { return v.value === name; })) k.push({ value: name, count: 0 }); });
+    $("kantinen").innerHTML = '<span class="lbl">Kantinen</span>' + k.map(function (v) {
+      var on = state.kantinen.indexOf(v.value) >= 0;
+      return '<button type="button" class="kt" data-k="' + esc(v.value) + '" aria-pressed="' + on + '">' + esc(v.value) + ' <span class="cnt">' + v.count + "</span></button>";
+    }).join("") + (state.kantinen.length ? '<button type="button" class="chip reset" data-kreset="1">Alle Kantinen</button>' : "");
   }
 
   function highlight(text) {
     if (!state.q) return esc(text);
     var words = state.q.split(/\s+/).filter(function (w) { return w.length > 2; }).map(function (w) { return w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); });
     if (!words.length) return esc(text);
-    var rx = new RegExp("(" + words.join("|") + ")", "gi");
-    return esc(text).replace(rx, "<mark>$1</mark>");
+    return esc(text).replace(new RegExp("(" + words.join("|") + ")", "gi"), "<mark>$1</mark>");
   }
 
   function dishHtml(d) {
@@ -258,89 +266,96 @@ footer a { color: inherit; }
       '</div><div class="meta"><span class="tag ' + t[0] + '">' + t[1] + '</span><span class="sub">' + esc(d.kategorie) + " · " + esc(d.preis_text) + "</span>" + kcal + "</div></div>";
   }
 
-  function trayHtml(k, items) {
-    var link = k.quelle ? '<a href="' + esc(k.quelle) + '" target="_blank" rel="noopener">Original-Speiseplan ↗</a>' : "";
-    return '<section class="tray"><div class="tray-head"><h2>' + esc(k.name) + "</h2>" + link + "</div>" + items.map(dishHtml).join("") + "</section>";
-  }
-
-  function filtered(src) {
-    var art = ARTEN.filter(function (a) { return a.id === state.art; })[0];
-    return src.filter(function (d) {
-      if (state.off[d.kantine_id]) return false;
-      if (art && art.test && !art.test(d.art)) return false;
-      return true;
+  function group(items) {
+    var g = {}, meta = {}, out = "";
+    items.forEach(function (d) { (g[d.kantine_id] = g[d.kantine_id] || []).push(d); meta[d.kantine_id] = d; });
+    Object.keys(g).sort(function (a, b) { return ORDER.indexOf(a) - ORDER.indexOf(b); }).forEach(function (id) {
+      var k = meta[id];
+      g[id].sort(function (a, b) { return a.id.localeCompare(b.id, "de", { numeric: true }); });
+      var link = k.quelle ? '<a href="' + esc(k.quelle) + '" target="_blank" rel="noopener">Original-Speiseplan ↗</a>' : "";
+      out += '<section class="tray"><div class="tray-head"><h2>' + esc(k.kantine) + "</h2>" + link + "</div>" + g[id].map(dishHtml).join("") + "</section>";
     });
+    return out;
   }
 
-  function renderList() {
-    var ks = kantinen(), html = "", n = 0;
-    var byId = {}; ks.forEach(function (k) { byId[k.id] = k; });
-    function group(items) {
-      var g = {}, out = "";
-      items.forEach(function (d) { (g[d.kantine_id] = g[d.kantine_id] || []).push(d); });
-      ks.forEach(function (k) {
-        if (!g[k.id]) return;
-        g[k.id].sort(function (a, b) { return a.id.localeCompare(b.id, "de", { numeric: true }); });
-        out += trayHtml(k, g[k.id]);
-      });
-      return out;
-    }
-    if (state.q) {
-      var hits = filtered(state.hits || []);
-      n = hits.length;
+  function renderList(r) {
+    var html = "";
+    if (state.day === "alle") {
       var byDay = {};
-      hits.forEach(function (d) { (byDay[d.datum] = byDay[d.datum] || []).push(d); });
+      r.docs.forEach(function (d) { (byDay[d.tag] = byDay[d.tag] || []).push(d); });
       Object.keys(byDay).sort().forEach(function (s) {
         var d = new Date(s + "T12:00:00");
         html += '<h3 class="day-title">' + TAGE[d.getDay()] + ", " + fmtDay(s) + "</h3>" + group(byDay[s]);
       });
-      $("status").textContent = n ? n + " Treffer für „" + state.q + "“" : "";
-      if (!n) html = '<div class="empty">Nichts gefunden für „' + esc(state.q) + '“. Andere Schreibweise probieren oder Filter lockern.</div>';
     } else {
-      var items = filtered(state.all.filter(function (d) { return d.datum === state.day; }));
-      n = items.length;
-      html = group(items);
-      $("status").textContent = "";
-      if (!n) html = '<div class="empty">Für diesen Tag passt kein Gericht zu den Filtern.</div>';
+      html = group(r.docs);
     }
+    if (!r.docs.length) {
+      html = '<div class="empty">' + (state.q ? "Nichts gefunden für „" + esc(state.q) + "“. Andere Schreibweise probieren oder Filter lockern." : "Für diese Auswahl gibt es kein Gericht.") + "</div>";
+    }
+    $("status").className = "status";
+    $("status").textContent = state.q ? r.total + " Treffer für „" + state.q + "“" : "";
     $("list").innerHTML = '<div style="display:grid;gap:14px">' + html + "</div>";
   }
 
-  var timer = null;
-  function onSearch() {
+  function load() {
+    var my = ++state.seq;
+    $("status").className = "status";
+    if (!$("list").innerHTML) $("status").textContent = "Lade …";
+    $("list").setAttribute("aria-busy", "true");
+    query({ q: state.q, tag: state.day === "alle" ? null : state.day, merkmal: state.merkmal, kantinen: state.kantinen }).then(function (r) {
+      if (my !== state.seq) return; // veraltete Antwort
+      renderDays(); renderFilters(r.facets); renderList(r);
+      $("list").removeAttribute("aria-busy");
+    }).catch(function (e) {
+      if (my !== state.seq) return;
+      $("status").textContent = "Speisepläne konnten nicht geladen werden (" + e.message + "). Bitte gleich noch mal versuchen.";
+      $("status").className = "status err";
+    });
+  }
+
+  // Start: verfügbare Tage aus der QSC-Facette "tag", dann heute (oder nächsten Tag mit Angebot) filtern
+  function init() {
+    query({ rows: 0 }).then(function (r) {
+      state.tage = (r.facets.tag || []).map(function (v) { return v.value; }).sort();
+      if (!state.tage.length) { $("status").textContent = "Gerade sind keine Speisepläne verfügbar."; return; }
+      var now = new Date(), ab = iso(now);
+      if (now.getHours() >= 14) { var t = new Date(now); t.setDate(t.getDate() + 1); ab = iso(t); }
+      state.day = state.tage.filter(function (s) { return s >= ab; })[0] || state.tage[state.tage.length - 1];
+      load();
+    }).catch(function (e) {
+      $("status").textContent = "Speisepläne konnten nicht geladen werden (" + e.message + "). Seite neu laden oder später versuchen.";
+      $("status").className = "status err";
+    });
+  }
+
+  var timer = null, lastDay = null;
+  $("q").addEventListener("input", function () {
     var q = $("q").value.trim();
     $("clear").hidden = !q;
     clearTimeout(timer);
     timer = setTimeout(function () {
-      state.q = q;
-      if (!q) { state.hits = null; renderControls(); renderList(); return; }
-      $("status").textContent = "Suche …";
-      fetchDocs(q).then(function (docs) {
-        if (state.q !== q) return;
-        state.hits = docs; renderControls(); renderList();
-      }).catch(function (e) { $("status").textContent = "Suche fehlgeschlagen (" + e.message + "). Bitte gleich noch mal versuchen."; $("status").className = "status err"; });
+      if (q && !state.q) { lastDay = state.day; state.day = "alle"; } // Suche über die ganze Woche
+      if (!q && state.q && lastDay) { state.day = lastDay; lastDay = null; }
+      state.q = q; load();
     }, 250);
-  }
+  });
 
   document.addEventListener("click", function (ev) {
     var b = ev.target.closest("button");
-    if (!b) return;
-    if (b.dataset.day) { state.day = b.dataset.day; if (state.q) { $("q").value = ""; onSearch(); } renderControls(); renderList(); }
-    else if (b.dataset.art) { state.art = b.dataset.art; try { localStorage.setItem("mittago.art", state.art); } catch (e) {} renderControls(); renderList(); }
-    else if (b.dataset.k) { state.off[b.dataset.k] = !state.off[b.dataset.k]; try { localStorage.setItem("mittago.off", JSON.stringify(state.off)); } catch (e) {} renderControls(); renderList(); }
-    else if (b.id === "clear") { $("q").value = ""; onSearch(); $("q").focus(); }
+    if (!b || b.disabled) return;
+    if (b.dataset.day) { state.day = b.dataset.day; lastDay = null; load(); }
+    else if (b.dataset.merkmal !== undefined) { state.merkmal = b.dataset.merkmal || null; save(); load(); }
+    else if (b.dataset.k) {
+      var i = state.kantinen.indexOf(b.dataset.k);
+      if (i >= 0) state.kantinen.splice(i, 1); else state.kantinen.push(b.dataset.k);
+      save(); load();
+    }
+    else if (b.dataset.kreset) { state.kantinen = []; save(); load(); }
+    else if (b.id === "clear") { $("q").value = ""; $("q").dispatchEvent(new Event("input")); $("q").focus(); }
   });
-  $("q").addEventListener("input", onSearch);
 
-  fetchDocs("*").then(function (docs) {
-    state.all = docs;
-    if (!docs.length) { $("status").textContent = "Gerade sind keine Speisepläne verfügbar."; return; }
-    state.day = pickDefaultDay(days());
-    renderControls(); renderList();
-  }).catch(function (e) {
-    $("status").textContent = "Speisepläne konnten nicht geladen werden (" + e.message + "). Seite neu laden oder später versuchen.";
-    $("status").className = "status err";
-  });
+  init();
 })();
 </script>
 </body>
