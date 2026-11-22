@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>mittago</title>
+<meta name="description" content="Was gibt's heute in Erfurts Kantinen? Alle Speisepläne an einem Ort.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Layout: schmale Spalte wie ein Tablett – Kopf mit Tageswahl, darunter je Kantine ein Tablett mit Gerichten */
+:root {
+  --bg: #f4f6f1;
+  --surface: #ffffff;
+  --ink: #18221d;
+  --muted: #5d6b63;
+  --line: #dde3da;
+  --accent: #2c7a4b;      /* Basilikum */
+  --accent-ink: #ffffff;
+  --mustard: #c98f0e;     /* Preise */
+  --veg: #2c7a4b;  --veg-bg: #e3f1e7;
+  --fish: #1f6aa5; --fish-bg: #e2eef8;
+  --bird: #a46a06; --bird-bg: #faf0d9;
+  --pork: #b2456b; --pork-bg: #f9e5ec;
+  --beef: #8a4a2c; --beef-bg: #f3e6dd;
+  --unk: #66706a;  --unk-bg: #eceeea;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --radius: 14px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111814; --surface: #19221d; --ink: #e7eee9; --muted: #9aa9a0; --line: #2a362f;
+    --accent: #5fbf86; --accent-ink: #0d1510; --mustard: #e8b54a;
+    --veg: #7fd3a0; --veg-bg: #1d3427; --fish: #84bdf0; --fish-bg: #172b3d;
+    --bird: #f0c46a; --bird-bg: #33280f; --pork: #f29ab9; --pork-bg: #3a1c27;
+    --beef: #e3a98a; --beef-bg: #35231a; --unk: #a7b1ab; --unk-bg: #252d28;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111814; --surface: #19221d; --ink: #e7eee9; --muted: #9aa9a0; --line: #2a362f;
+  --accent: #5fbf86; --accent-ink: #0d1510; --mustard: #e8b54a;
+  --veg: #7fd3a0; --veg-bg: #1d3427; --fish: #84bdf0; --fish-bg: #172b3d;
+  --bird: #f0c46a; --bird-bg: #33280f; --pork: #f29ab9; --pork-bg: #3a1c27;
+  --beef: #e3a98a; --beef-bg: #35231a; --unk: #a7b1ab; --unk-bg: #252d28;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 16px/1.5 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: max(20px, env(safe-area-inset-top, 0px)) 48px;
+}
+.wrap { max-width: 760px; margin: 0 auto; display: grid; gap: 22px; }
+
+header { display: grid; gap: 14px; }
+.brand { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+h1 {
+  font-family: var(--font-display); font-weight: 800; font-size: clamp(2.2rem, 7vw, 3.2rem);
+  letter-spacing: -0.03em; line-height: 1; margin: 0;
+}
+h1 span { color: var(--accent); }
+.tagline { color: var(--muted); margin: 0; font-size: 0.95rem; }
+
+.search { position: relative; }
+.search input {
+  width: 100%; font: inherit; font-size: 1.05rem; color: var(--ink);
+  background: var(--surface); border: 1.5px solid var(--line); border-radius: 999px;
+  padding: 12px 44px 12px 44px; outline: none;
+}
+.search input:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+.search svg { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--muted); }
+.search button.clear {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 1.3rem; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
+}
+.search button.clear:hover { background: var(--line); }
+
+.days { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.days::-webkit-scrollbar { display: none; }
+.day {
+  flex: 0 0 auto; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink);
+  font: inherit; border-radius: 12px; padding: 7px 12px; cursor: pointer; text-align: left; line-height: 1.2;
+}
+.day b { display: block; font-family: var(--font-display); font-weight: 700; font-size: 1rem; }
+.day small { color: var(--muted); font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+.day[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.day[aria-pressed="true"] small { color: inherit; opacity: 0.85; }
+.day:focus-visible, .chip:focus-visible, .kt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.filters { display: grid; gap: 10px; }
+.row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.row .lbl { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-right: 4px; min-width: 64px; }
+.chip, .kt {
+  font: inherit; font-size: 0.88rem; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink);
+  border-radius: 999px; padding: 4px 11px; cursor: pointer;
+}
+.chip[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--bg); }
+.kt[aria-pressed="false"] { color: var(--muted); text-decoration: line-through; opacity: 0.7; }
+
+.status { color: var(--muted); font-size: 0.9rem; min-height: 1.4em; }
+.status.err { color: var(--pork); }
+
+.tray { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.tray-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 14px 16px 10px; flex-wrap: wrap; }
+.tray-head h2 { font-family: var(--font-display); font-weight: 700; font-size: 1.15rem; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.tray-head a { color: var(--muted); font-size: 0.82rem; text-decoration: none; }
+.tray-head a:hover { color: var(--accent); text-decoration: underline; }
+.dish { display: grid; grid-template-columns: 1fr auto; gap: 4px 14px; padding: 11px 16px; border-top: 1px solid var(--line); }
+.dish .name { min-width: 0; overflow-wrap: anywhere; }
+.dish .meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; grid-column: 1 / -1; }
+.dish .price { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--mustard); white-space: nowrap; text-align: right; }
+.tag { font-size: 0.74rem; font-weight: 600; border-radius: 6px; padding: 1px 7px; letter-spacing: 0.01em; }
+.tag.veg { color: var(--veg); background: var(--veg-bg); }
+.tag.fish { color: var(--fish); background: var(--fish-bg); }
+.tag.bird { color: var(--bird); background: var(--bird-bg); }
+.tag.pork { color: var(--pork); background: var(--pork-bg); }
+.tag.beef { color: var(--beef); background: var(--beef-bg); }
+.tag.unk { color: var(--unk); background: var(--unk-bg); }
+.sub { color: var(--muted); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+mark { background: color-mix(in srgb, var(--mustard) 28%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
+
+.day-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; margin: 6px 0 -8px; color: var(--muted); }
+.empty { text-align: center; color: var(--muted); padding: 32px 12px; border: 1.5px dashed var(--line); border-radius: var(--radius); }
+
+footer { color: var(--muted); font-size: 0.8rem; display: grid; gap: 4px; border-top: 1px solid var(--line); padding-top: 14px; }
+footer a { color: inherit; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .tray { animation: rise .25s ease-out both; }
+  @keyframes rise { from { transform: translateY(4px); opacity: .6; } to { transform: none; opacity: 1; } }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>mitta<span>go</span></h1>
+      <p class="tagline">Erfurts Kantinen auf einen Blick</p>
+    </div>
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+      <input id="q" type="search" placeholder="Gericht suchen, z. B. Schnitzel, Curry, Lachs" autocomplete="off" aria-label="Gericht suchen">
+      <button class="clear" id="clear" type="button" aria-label="Suche leeren" hidden>×</button>
+    </div>
+    <nav class="days" id="days" aria-label="Tag wählen"></nav>
+    <div class="filters">
+      <div class="row" id="arten" role="group" aria-label="Art"><span class="lbl">Art</span></div>
+      <div class="row" id="kantinen" role="group" aria-label="Kantinen"><span class="lbl">Kantinen</span></div>
+    </div>
+  </header>
+
+  <div class="status" id="status" role="status">Speisepläne werden geladen …</div>
+  <main id="list" aria-live="polite"></main>
+
+  <footer>
+    <div>Daten aus den Speiseplänen der Kantinen, täglich aktualisiert. Angaben ohne Gewähr. Preise: Gästepreis, Details am Gericht.</div>
+    <div>„vermutlich vegetarisch“ heißt: im Namen kein Fleisch erkannt. Allergene bitte vor Ort prüfen.</div>
+    <div>Suche powered by Quasiris Search Cloud.</div>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var API = "https://qsc-dev.quasiris.de/api/v1/search/tbl/mittago";
+  var TAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+  var ARTEN = [
+    { id: "alle", label: "Alle" },
+    { id: "veg", label: "Vegetarisch", test: function (a) { return a === "vegan" || a === "vegetarisch" || a === "vegetarisch?"; } },
+    { id: "vegan", label: "Vegan", test: function (a) { return a === "vegan"; } },
+    { id: "fisch", label: "Fisch", test: function (a) { return a === "fisch"; } },
+    { id: "gefluegel", label: "Geflügel", test: function (a) { return a === "gefluegel"; } },
+    { id: "ohne-schwein", label: "Ohne Schwein", test: function (a) { return a !== "schwein"; } }
+  ];
+  var TAG = {
+    "vegan": ["veg", "vegan"], "vegetarisch": ["veg", "vegetarisch"], "vegetarisch?": ["veg", "vermutlich vegetarisch"],
+    "fisch": ["fish", "Fisch"], "gefluegel": ["bird", "Geflügel"], "schwein": ["pork", "Schwein"],
+    "rind": ["beef", "Rind"], "lamm": ["beef", "Lamm"], "wild": ["beef", "Wild"], "unbekannt": ["unk", "noch offen"]
+  };
+  var ORDER = ["tks", "sparkasse", "bergstrom", "stw-fh", "stw-uni", "stw-schlueter", "stw-leipziger"];
+
+  var state = { all: [], hits: null, day: null, art: "alle", off: {}, q: "" };
+  try { state.off = JSON.parse(localStorage.getItem("mittago.off") || "{}") || {}; } catch (e) { state.off = {}; }
+  try { state.art = localStorage.getItem("mittago.art") || "alle"; } catch (e) {}
+
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
+  function iso(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+  function fmtDay(s) { var p = s.split("-"); return p[2] + "." + p[1] + "."; }
+  function euro(n) { return n == null ? "" : n.toFixed(2).replace(".", ",") + " €"; }
+
+  function fetchDocs(q) {
+    var url = API + "?rows=500&q=" + encodeURIComponent(q || "*");
+    return fetch(url).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (j) {
+      var res = j && j.result && j.result.mittago;
+      return (res && res.documents || []).map(function (d) { return d.document; });
+    });
+  }
+
+  function days() {
+    var set = {};
+    state.all.forEach(function (d) { set[d.datum] = 1; });
+    return Object.keys(set).sort();
+  }
+
+  function pickDefaultDay(list) {
+    var now = new Date(), today = iso(now);
+    // nach 14 Uhr lieber den nächsten Tag zeigen
+    if (now.getHours() >= 14) { var t = new Date(now); t.setDate(t.getDate() + 1); today = iso(t); }
+    for (var i = 0; i < list.length; i++) if (list[i] >= today) return list[i];
+    return list[list.length - 1] || null;
+  }
+
+  function kantinen() {
+    var seen = {}, out = [];
+    state.all.forEach(function (d) { if (!seen[d.kantine_id]) { seen[d.kantine_id] = 1; out.push({ id: d.kantine_id, name: d.kantine, quelle: d.quelle, adresse: d.adresse }); } });
+    out.sort(function (a, b) { return ORDER.indexOf(a.id) - ORDER.indexOf(b.id); });
+    return out;
+  }
+
+  function renderControls() {
+    var dl = days(), now = iso(new Date());
+    $("days").innerHTML = dl.map(function (s) {
+      var d = new Date(s + "T12:00:00"), name = s === now ? "Heute" : TAGE[d.getDay()];
+      return '<button type="button" class="day" data-day="' + s + '" aria-pressed="' + (s === state.day && !state.q) + '"><b>' + name + '</b><small>' + fmtDay(s) + "</small></button>";
+    }).join("");
+    $("arten").innerHTML = '<span class="lbl">Art</span>' + ARTEN.map(function (a) {
+      return '<button type="button" class="chip" data-art="' + a.id + '" aria-pressed="' + (a.id === state.art) + '">' + a.label + "</button>";
+    }).join("");
+    $("kantinen").innerHTML = '<span class="lbl">Kantinen</span>' + kantinen().map(function (k) {
+      return '<button type="button" class="kt" data-k="' + esc(k.id) + '" aria-pressed="' + !state.off[k.id] + '" title="' + esc(k.adresse) + '">' + esc(k.name) + "</button>";
+    }).join("");
+  }
+
+  function highlight(text) {
+    if (!state.q) return esc(text);
+    var words = state.q.split(/\s+/).filter(function (w) { return w.length > 2; }).map(function (w) { return w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); });
+    if (!words.length) return esc(text);
+    var rx = new RegExp("(" + words.join("|") + ")", "gi");
+    return esc(text).replace(rx, "<mark>$1</mark>");
+  }
+
+  function dishHtml(d) {
+    var t = TAG[d.art] || TAG.unbekannt;
+    var kcal = d.kcal ? '<span class="sub">' + d.kcal + " kcal</span>" : "";
+    return '<div class="dish"><div class="name">' + highlight(d.gericht) + '</div><div class="price">' + euro(d.preis) +
+      '</div><div class="meta"><span class="tag ' + t[0] + '">' + t[1] + '</span><span class="sub">' + esc(d.kategorie) + " · " + esc(d.preis_text) + "</span>" + kcal + "</div></div>";
+  }
+
+  function trayHtml(k, items) {
+    var link = k.quelle ? '<a href="' + esc(k.quelle) + '" target="_blank" rel="noopener">Original-Speiseplan ↗</a>' : "";
+    return '<section class="tray"><div class="tray-head"><h2>' + esc(k.name) + "</h2>" + link + "</div>" + items.map(dishHtml).join("") + "</section>";
+  }
+
+  function filtered(src) {
+    var art = ARTEN.filter(function (a) { return a.id === state.art; })[0];
+    return src.filter(function (d) {
+      if (state.off[d.kantine_id]) return false;
+      if (art && art.test && !art.test(d.art)) return false;
+      return true;
+    });
+  }
+
+  function renderList() {
+    var ks = kantinen(), html = "", n = 0;
+    var byId = {}; ks.forEach(function (k) { byId[k.id] = k; });
+    function group(items) {
+      var g = {}, out = "";
+      items.forEach(function (d) { (g[d.kantine_id] = g[d.kantine_id] || []).push(d); });
+      ks.forEach(function (k) {
+        if (!g[k.id]) return;
+        g[k.id].sort(function (a, b) { return a.id.localeCompare(b.id, "de", { numeric: true }); });
+        out += trayHtml(k, g[k.id]);
+      });
+      return out;
+    }
+    if (state.q) {
+      var hits = filtered(state.hits || []);
+      n = hits.length;
+      var byDay = {};
+      hits.forEach(function (d) { (byDay[d.datum] = byDay[d.datum] || []).push(d); });
+      Object.keys(byDay).sort().forEach(function (s) {
+        var d = new Date(s + "T12:00:00");
+        html += '<h3 class="day-title">' + TAGE[d.getDay()] + ", " + fmtDay(s) + "</h3>" + group(byDay[s]);
+      });
+      $("status").textContent = n ? n + " Treffer für „" + state.q + "“" : "";
+      if (!n) html = '<div class="empty">Nichts gefunden für „' + esc(state.q) + '“. Andere Schreibweise probieren oder Filter lockern.</div>';
+    } else {
+      var items = filtered(state.all.filter(function (d) { return d.datum === state.day; }));
+      n = items.length;
+      html = group(items);
+      $("status").textContent = "";
+      if (!n) html = '<div class="empty">Für diesen Tag passt kein Gericht zu den Filtern.</div>';
+    }
+    $("list").innerHTML = '<div style="display:grid;gap:14px">' + html + "</div>";
+  }
+
+  var timer = null;
+  function onSearch() {
+    var q = $("q").value.trim();
+    $("clear").hidden = !q;
+    clearTimeout(timer);
+    timer = setTimeout(function () {
+      state.q = q;
+      if (!q) { state.hits = null; renderControls(); renderList(); return; }
+      $("status").textContent = "Suche …";
+      fetchDocs(q).then(function (docs) {
+        if (state.q !== q) return;
+        state.hits = docs; renderControls(); renderList();
+      }).catch(function (e) { $("status").textContent = "Suche fehlgeschlagen (" + e.message + "). Bitte gleich noch mal versuchen."; $("status").className = "status err"; });
+    }, 250);
+  }
+
+  document.addEventListener("click", function (ev) {
+    var b = ev.target.closest("button");
+    if (!b) return;
+    if (b.dataset.day) { state.day = b.dataset.day; if (state.q) { $("q").value = ""; onSearch(); } renderControls(); renderList(); }
+    else if (b.dataset.art) { state.art = b.dataset.art; try { localStorage.setItem("mittago.art", state.art); } catch (e) {} renderControls(); renderList(); }
+    else if (b.dataset.k) { state.off[b.dataset.k] = !state.off[b.dataset.k]; try { localStorage.setItem("mittago.off", JSON.stringify(state.off)); } catch (e) {} renderControls(); renderList(); }
+    else if (b.id === "clear") { $("q").value = ""; onSearch(); $("q").focus(); }
+  });
+  $("q").addEventListener("input", onSearch);
+
+  fetchDocs("*").then(function (docs) {
+    state.all = docs;
+    if (!docs.length) { $("status").textContent = "Gerade sind keine Speisepläne verfügbar."; return; }
+    state.day = pickDefaultDay(days());
+    renderControls(); renderList();
+  }).catch(function (e) {
+    $("status").textContent = "Speisepläne konnten nicht geladen werden (" + e.message + "). Seite neu laden oder später versuchen.";
+    $("status").className = "status err";
+  });
+})();
+</script>
+</body>
+</html>
