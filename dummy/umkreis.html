@@ -3,128 +3,98 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>mittago Umkreis-Dummy</title>
+<title>Umkreis-Varianten</title>
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@400;500;600&display=swap">
 <style>
-/* Klick-Dummy für die Darstellung der Umkreissuche. Statische Daten, keine QSC-Anfragen. */
+/* Variantengalerie: ein Raster aus Karten, jede Karte ein eigenständiges Umkreis-Widget mit Facetten-Zählern. Gemeinsamer Zustand. */
 :root {
   --bg: #f4f6f1; --surface: #fff; --ink: #18221d; --muted: #5d6b63; --line: #dde3da;
-  --accent: #2c7a4b; --accent-ink: #fff; --mustard: #c98f0e; --soft: #e3f1e7;
-  --pork: #b2456b; --pork-bg: #f9e5ec; --veg: #2c7a4b; --veg-bg: #e3f1e7; --fish: #1f6aa5; --fish-bg: #e2eef8;
-  --bird: #a46a06; --bird-bg: #faf0d9; --beef: #8a4a2c; --beef-bg: #f3e6dd; --note: #fff7e0; --note-line: #ecd9a0;
+  --accent: #2c7a4b; --accent-ink: #fff; --soft: #e3f1e7; --pin: #b2456b; --note: #fff7e0; --note-line: #ecd9a0;
   --font-display: "Bricolage Grotesque", system-ui, sans-serif; --font-body: "Figtree", system-ui, sans-serif;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #111814; --surface: #19221d; --ink: #e7eee9; --muted: #9aa9a0; --line: #2a362f; --accent: #5fbf86; --accent-ink: #0d1510;
-  --mustard: #e8b54a; --soft: #1d3427; --pork: #f29ab9; --pork-bg: #3a1c27; --veg: #7fd3a0; --veg-bg: #1d3427; --fish: #84bdf0; --fish-bg: #172b3d;
-  --bird: #f0c46a; --bird-bg: #33280f; --beef: #e3a98a; --beef-bg: #35231a; --note: #2a2614; --note-line: #4a4220; color-scheme: dark; } }
+  --soft: #1d3427; --pin: #f29ab9; --note: #2a2614; --note-line: #4a4220; color-scheme: dark; } }
 :root[data-theme="dark"] {
   --bg: #111814; --surface: #19221d; --ink: #e7eee9; --muted: #9aa9a0; --line: #2a362f; --accent: #5fbf86; --accent-ink: #0d1510;
-  --mustard: #e8b54a; --soft: #1d3427; --pork: #f29ab9; --pork-bg: #3a1c27; --veg: #7fd3a0; --veg-bg: #1d3427; --fish: #84bdf0; --fish-bg: #172b3d;
-  --bird: #f0c46a; --bird-bg: #33280f; --beef: #e3a98a; --beef-bg: #35231a; --note: #2a2614; --note-line: #4a4220; color-scheme: dark; }
+  --soft: #1d3427; --pin: #f29ab9; --note: #2a2614; --note-line: #4a4220; color-scheme: dark; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--font-body);
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 48px; }
-.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 18px; }
-h1 { font-family: var(--font-display); font-weight: 800; font-size: 2rem; letter-spacing: -0.03em; margin: 0; line-height: 1; }
-h1 span { color: var(--accent); }
-.sub { color: var(--muted); font-size: 0.85rem; }
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 18px; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: 1.9rem; letter-spacing: -0.02em; margin: 0; line-height: 1.1; }
+.lead { color: var(--muted); margin: 4px 0 0; max-width: 70ch; }
+.demo { background: var(--note); border: 1px dashed var(--note-line); border-radius: 12px; padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; font-size: 0.86rem; }
+.demo b { font-weight: 600; margin-right: 4px; }
+.demo select, .demo button { font: inherit; font-size: 0.84rem; }
+.demo select { border: 1px solid var(--note-line); border-radius: 8px; padding: 3px 6px; background: var(--surface); color: var(--ink); }
+.demo .pill { border: 1px solid var(--note-line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 2px 10px; cursor: pointer; }
+.demo .pill[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.demo label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
 
-/* Varianten-Leiste (gehört nicht zum Produkt) */
-.variants { background: var(--note); border: 1px dashed var(--note-line); border-radius: 12px; padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; font-size: 0.85rem; }
-.variants b { font-weight: 600; margin-right: 6px; }
-.variants .grp { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
-.variants button { font: inherit; font-size: 0.8rem; border: 1px solid var(--note-line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 2px 9px; cursor: pointer; }
-.variants button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-
-.layout { display: grid; gap: 18px; }
-@media (min-width: 900px) { .layout { grid-template-columns: 320px minmax(0, 1fr); align-items: start; } .side { position: sticky; top: 16px; } }
-.side { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 12px; }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.card header { display: flex; gap: 10px; align-items: baseline; }
+.card header .k { font-family: var(--font-display); font-weight: 800; color: var(--accent); font-size: 1.2rem; }
+.card header h2 { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; margin: 0; }
+.card .why { color: var(--muted); font-size: 0.8rem; margin: -4px 0 0; }
+.card .res { border-top: 1px solid var(--line); padding-top: 8px; font-size: 0.85rem; color: var(--muted); }
+.card .res b { color: var(--ink); }
 .lbl { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
-select { width: 100%; font: inherit; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: 10px; padding: 7px 10px; }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip { font: inherit; font-size: 0.86rem; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 4px 11px; cursor: pointer; display: inline-flex; gap: 6px; align-items: baseline; }
-.chip small { color: var(--muted); font-size: 0.76rem; font-variant-numeric: tabular-nums; }
-.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.chip[aria-pressed="true"] small { color: inherit; opacity: .85; }
-.chip:disabled { opacity: .4; cursor: default; }
-.check { display: flex; gap: 8px; align-items: center; font-size: 0.92rem; cursor: pointer; }
-.check input { width: 17px; height: 17px; accent-color: var(--accent); }
-.hist { display: grid; gap: 4px; }
-.bars { display: flex; align-items: flex-end; gap: 6px; height: 46px; }
-.bars span { flex: 1; background: var(--line); border-radius: 3px 3px 0 0; position: relative; }
-.bars span.in { background: color-mix(in srgb, var(--accent) 70%, transparent); }
-.ticks { display: flex; gap: 6px; font-size: 0.72rem; color: var(--muted); }
-.ticks span { flex: 1; text-align: center; }
-
-.head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
-.count { color: var(--muted); font-size: 0.9rem; }
-.seg { display: inline-flex; border: 1.5px solid var(--line); border-radius: 999px; padding: 2px; background: var(--surface); }
-.seg button { font: inherit; font-size: 0.82rem; border: 0; background: none; color: var(--muted); padding: 3px 10px; border-radius: 999px; cursor: pointer; }
-.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
-.results { display: grid; gap: 12px; }
-.ring { font-family: var(--font-display); font-weight: 700; color: var(--muted); font-size: 0.95rem; margin: 6px 0 -4px; display: flex; gap: 8px; align-items: center; }
-.ring::after { content: ""; flex: 1; height: 1px; background: var(--line); }
-.tray { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
-.tray-head { padding: 12px 16px 8px; display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
-.tray-head h2 { margin: 0; font-family: var(--font-display); font-size: 1.1rem; }
-.where { color: var(--muted); font-size: 0.8rem; }
-.dist { text-align: right; line-height: 1.2; }
-.dist b { display: block; color: var(--accent); font-size: 1rem; font-weight: 600; }
-.dist small { color: var(--muted); font-size: 0.76rem; }
-.dish { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 9px 16px; border-top: 1px solid var(--line); }
-.dish .p { color: var(--mustard); font-weight: 600; font-variant-numeric: tabular-nums; }
-.tag { font-size: 0.72rem; font-weight: 600; border-radius: 6px; padding: 1px 7px; justify-self: start; }
-.t-veg { color: var(--veg); background: var(--veg-bg); } .t-fish { color: var(--fish); background: var(--fish-bg); }
-.t-bird { color: var(--bird); background: var(--bird-bg); } .t-pork { color: var(--pork); background: var(--pork-bg); } .t-beef { color: var(--beef); background: var(--beef-bg); }
-.empty { background: var(--surface); border: 1.5px dashed var(--line); border-radius: 14px; padding: 26px 18px; text-align: center; display: grid; gap: 10px; justify-items: center; }
-.empty b { font-size: 1.05rem; }
-.btn { font: inherit; font-weight: 600; border: 0; background: var(--accent); color: var(--accent-ink); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
-.map { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
-.map svg { display: block; width: 100%; height: auto; }
-.map .cap { padding: 6px 12px; font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line); }
+.n { color: var(--muted); font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+button { font: inherit; }
 button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* A Chips */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 4px 11px; cursor: pointer; display: inline-flex; gap: 6px; align-items: baseline; font-size: 0.88rem; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.chip[aria-pressed="true"] .n { color: inherit; opacity: .85; }
+.chip:disabled { opacity: .4; cursor: default; }
+/* B Radios */
+.radios { display: grid; gap: 2px; }
+.radio { display: flex; align-items: center; gap: 10px; padding: 4px 0; cursor: pointer; font-size: 0.92rem; }
+.radio input { width: 17px; height: 17px; accent-color: var(--accent); margin: 0; }
+.radio .t { flex: 1; } .radio.off { opacity: .45; }
+/* C Dropdown */
+.selrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sel { width: 100%; border: 1.5px solid var(--line); border-radius: 10px; padding: 7px 9px; background: var(--surface); color: var(--ink); font: inherit; font-size: 0.9rem; }
+/* D Slider */
+.bars { display: flex; align-items: flex-end; gap: 6px; height: 54px; }
+.bars span { flex: 1; background: var(--line); border-radius: 3px 3px 0 0; }
+.bars span.in { background: color-mix(in srgb, var(--accent) 70%, transparent); }
+.ticks { display: flex; gap: 6px; font-size: 0.72rem; color: var(--muted); text-align: center; }
+.ticks span { flex: 1; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+/* F Satz */
+.sentence { font-size: 1.15rem; line-height: 2; }
+.sentence select { font: inherit; font-weight: 600; color: var(--accent); border: 0; border-bottom: 2px dashed var(--accent); background: transparent; padding: 0 2px; cursor: pointer; }
+/* G Zielscheibe, H Karte */
+svg { display: block; width: 100%; height: auto; }
+.target circle.ring { cursor: pointer; }
+.map { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; touch-action: none; }
+.hint { font-size: 0.75rem; color: var(--muted); }
+.cta { justify-self: start; border: 0; background: var(--accent); color: var(--accent-ink); border-radius: 999px; padding: 4px 12px; cursor: pointer; font-size: 0.84rem; font-weight: 600; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div>
-    <h1>mitta<span>go</span></h1>
-    <div class="sub">Klick-Dummy Umkreissuche · statische Daten vom Dienstag, 24.11. · keine Anfragen an QSC</div>
+    <h1>Umkreissuche – Varianten</h1>
+    <p class="lead">Acht Bausteine für denselben Filter. Alle Karten teilen sich den Zustand: Ein Klick in einer Variante ändert alle. Die Zahlen entsprechen der geplanten QSC-Entfernungs-Facette (kumulativ, unabhängig vom gewählten Radius). Daten: echte Gerichte vom 24.11., hier im Browser gerechnet.</p>
   </div>
 
-  <div class="variants" aria-label="Varianten für die Diskussion">
-    <span class="grp"><b>Zähler an Chips:</b><button data-v="zaehler" data-x="gerichte">Gerichte</button><button data-v="zaehler" data-x="kantinen">Kantinen</button><button data-v="zaehler" data-x="beides">beides</button><button data-v="zaehler" data-x="keine">keine</button></span>
-    <span class="grp"><b>Entfernung:</b><button data-v="einheit" data-x="meter">Meter</button><button data-v="einheit" data-x="gehzeit">Gehzeit</button><button data-v="einheit" data-x="beides">beides</button></span>
-    <span class="grp"><b>Radius als:</b><button data-v="radiusui" data-x="chips">Chips</button><button data-v="radiusui" data-x="histogramm">Histogramm</button></span>
-    <span class="grp"><b>Gruppierung:</b><button data-v="gruppen" data-x="aus">aus</button><button data-v="gruppen" data-x="ringe">nach Ringen</button></span>
-    <span class="grp"><b>Karte:</b><button data-v="karte" data-x="aus">aus</button><button data-v="karte" data-x="an">an</button></span>
+  <div class="demo" aria-label="Demo-Steuerung">
+    <span><b>Mittelpunkt:</b><select id="ort" aria-label="Mittelpunkt"></select></span>
+    <label><input type="checkbox" id="veg"> nur vegetarisch</label>
+    <span><b>Zählen:</b><button class="pill" data-zaehl="gerichte">Gerichte</button> <button class="pill" data-zaehl="kantinen">Kantinen</button> <button class="pill" data-zaehl="beides">beides</button></span>
   </div>
 
-  <div class="layout">
-    <aside class="side" aria-label="Filter">
-      <div>
-        <div class="lbl">Umkreis um</div>
-        <select id="ort" aria-label="Mittelpunkt"></select>
-      </div>
-      <div id="radius"></div>
-      <label class="check"><input type="checkbox" id="veg"> Nur vegetarisch</label>
-      <div class="sub">Tipp: „Nur vegetarisch“ + 500 m um den Hauptbahnhof zeigt den leeren Zustand.</div>
-    </aside>
-
-    <main class="results">
-      <div class="head">
-        <span class="count" id="count" role="status"></span>
-        <div class="seg" role="group" aria-label="Sortierung"><button data-sort="naehe">Nach Nähe</button><button data-sort="kantine">Nach Kantine</button></div>
-      </div>
-      <div id="map"></div>
-      <div id="list" class="results"></div>
-    </main>
-  </div>
+  <div class="grid" id="grid"></div>
 </div>
 
 <script>
@@ -132,157 +102,165 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
   "use strict";
   var DATA = {"tag": "2026-11-24", "dishes": [{"k": "bergstrom", "g": "Vegetarisch gefüllte Zucchini mit Tomatenreis und Salat", "art": "vegetarisch", "veg": true, "preis": 7.8, "kcal": 580, "est": true}, {"k": "bergstrom", "g": "Köttbullar mit Speckbohnen, Kartoffelpüree und Rahmsauce", "art": "schwein", "veg": false, "preis": 8.0, "kcal": 710, "est": true}, {"k": "sparkasse", "g": "Tortelloni, Ricotta, Gemüse, Rucola", "art": "vegetarisch?", "veg": true, "preis": 8.3, "kcal": 620, "est": true}, {"k": "sparkasse", "g": "Germknödel, Pflaumenmusfüllung, Vanillesauce", "art": "vegetarisch", "veg": true, "preis": 4.6, "kcal": 600, "est": true}, {"k": "sparkasse", "g": "Schweineschnitzel, Kaisergemüse, Hollandaise, Kartoffel Wedges", "art": "schwein", "veg": false, "preis": 9.1, "kcal": 1010, "est": true}, {"k": "stw-fh", "g": "Mediterranes Sojageschnetzeltes mit Reiskornnudeln", "art": "vegetarisch", "veg": true, "preis": 5.8, "kcal": 620, "est": true}, {"k": "stw-fh", "g": "Ofenkartoffel mit Tomaten-Schnittlauchquark und Salat", "art": "vegetarisch?", "veg": true, "preis": 6.5, "kcal": 550, "est": true}, {"k": "stw-fh", "g": "Falafel mit Tsatsikidip und Tomatenreis, Rotkrautsalat", "art": "vegetarisch", "veg": true, "preis": 7.3, "kcal": 580, "est": true}, {"k": "stw-fh", "g": "Hähnchenbrust im Knuspermantel mit Tomatensoße und Tagliatelle, dazu eine Beilage", "art": "gefluegel", "veg": false, "preis": 7.6, "kcal": 620, "est": true}, {"k": "stw-leipziger", "g": "Mediterranes Sojageschnetzeltes mit Reiskornnudeln", "art": "vegetarisch", "veg": true, "preis": 5.8, "kcal": 620, "est": true}, {"k": "stw-leipziger", "g": "Ofenkartoffel mit Tomaten-Schnittlauchquark und Salat", "art": "vegetarisch?", "veg": true, "preis": 6.5, "kcal": 550, "est": true}, {"k": "stw-schlueter", "g": "Mediterranes Sojageschnetzeltes mit Reiskornnudeln", "art": "vegetarisch", "veg": true, "preis": 5.8, "kcal": 620, "est": true}, {"k": "stw-schlueter", "g": "Ofenkartoffel mit Tomaten-Schnittlauchquark und Salat", "art": "vegetarisch?", "veg": true, "preis": 6.5, "kcal": 550, "est": true}, {"k": "stw-uni", "g": "Bohnen- Zucchini- Chili mit Koriander dazu Couscous", "art": "vegetarisch?", "veg": true, "preis": 5.8, "kcal": 620, "est": true}, {"k": "stw-uni", "g": "ab 10:00 Uhr Pastateller: Maccaroni and Cheese und BIO-Spaghetti, Curry-Gemüse-Soße, mediterranes Tomatenragout, Reibekäsealternative, Reibekäse", "art": "vegetarisch?", "veg": true, "preis": 6.8, "kcal": 620, "est": true}, {"k": "stw-uni", "g": "Gemüse-Nudel-Gratin Griechische Art mit Hirtenkäse", "art": "vegetarisch?", "veg": true, "preis": 6.8, "kcal": 740, "est": true}, {"k": "stw-uni", "g": "Sojagulasch mit Champignons, Spätzle, 1 Soja Dessert mit Nuss Geschmack oder 1 Rotkohlsalat", "art": "vegetarisch", "veg": true, "preis": 6.8, "kcal": 560, "est": true}, {"k": "stw-uni", "g": "Hähnchenbrust im Knuspermantel, Tomatensoße, Kaisergemüse, grüne Tagliatelle oder Petersilienkartoffeln", "art": "gefluegel", "veg": false, "preis": 7.6, "kcal": 620, "est": true}, {"k": "tks", "g": "Gebratene Hähnchenfilets mit Zitronensauce, Parmesan-Kartoffelpüree", "art": "gefluegel", "veg": false, "preis": 8.0, "kcal": 607, "est": false}, {"k": "tks", "g": "Bolognesesauce, Spaghetti, Parmesan", "art": "schwein", "veg": false, "preis": 7.0, "kcal": 583, "est": false}, {"k": "tks", "g": "Gekochte Eier, Senfsauce, Petersilienkartoffeln, Rote Beete Salat", "art": "vegetarisch", "veg": true, "preis": 6.0, "kcal": 527, "est": false}, {"k": "tks", "g": "Tagesangebot (wird noch bekannt gegeben)", "art": "unbekannt", "veg": false, "preis": 5.0, "kcal": null, "est": true}], "kantinen": [{"id": "bergstrom", "name": "Kantine am Bergstrom", "adresse": "Koenbergkstraße 1, 99084 Erfurt", "lat": 50.97574, "lon": 11.01962}, {"id": "sparkasse", "name": "Sparkasse Kantine", "adresse": "Brühler Str. 45, 99084 Erfurt", "lat": 50.97139, "lon": 11.01698}, {"id": "stw-fh", "name": "Mensa Altonaer Straße (FH)", "adresse": "Altonaer Straße 25, 99085 Erfurt", "lat": 50.98502, "lon": 11.04276}, {"id": "stw-leipziger", "name": "Cafeteria Leipziger Straße (FH)", "adresse": "Leipziger Straße 77, 99085 Erfurt", "lat": 50.99156, "lon": 11.05475}, {"id": "stw-schlueter", "name": "Cafeteria Schlüterstraße (FH)", "adresse": "Schlüterstraße 1, 99089 Erfurt", "lat": 50.9855, "lon": 11.02445}, {"id": "stw-uni", "name": "Mensa Nordhäuser Straße (Uni)", "adresse": "Nordhäuser Straße 63, 99089 Erfurt", "lat": 50.99084, "lon": 11.00888}, {"id": "tks", "name": "Casino im Justizzentrum", "adresse": "Rudolfstraße 46, 99092 Erfurt", "lat": 50.97575, "lon": 11.01378}], "orte": [{"name": "Quasiris Office", "lat": 50.972, "lon": 11.01171}, {"name": "Domplatz", "lat": 50.97755, "lon": 11.02282}, {"name": "Hauptbahnhof", "lat": 50.97277, "lon": 11.03789}, {"name": "Anger", "lat": 50.97646, "lon": 11.03401}, {"name": "Gothaer Platz", "lat": 50.97135, "lon": 11.01139}, {"name": "Fachhochschule (Altonaer Str.)", "lat": 50.98502, "lon": 11.04276}, {"name": "Universität Erfurt", "lat": 50.98921, "lon": 11.00902}, {"name": "Thüringer Landtag", "lat": 50.96398, "lon": 11.03442}, {"name": "Krämerbrücke", "lat": 50.97875, "lon": 11.03094}, {"name": "Messe Erfurt", "lat": 50.95932, "lon": 10.98967}]};
   var RINGE = [500, 1000, 2000, 5000];
-  var V = { zaehler: "beides", einheit: "beides", radiusui: "chips", gruppen: "aus", karte: "aus" };
-  var S = { ort: 0, radius: 500, veg: false, sort: "naehe" };
-  var ORDER = ["tks", "sparkasse", "bergstrom", "stw-fh", "stw-uni", "stw-schlueter", "stw-leipziger"];
-  var TAG = { "vegan": ["t-veg", "vegan"], "vegetarisch": ["t-veg", "vegetarisch"], "vegetarisch?": ["t-veg", "vermutlich vegetarisch"], "fisch": ["t-fish", "Fisch"], "gefluegel": ["t-bird", "Geflügel"], "schwein": ["t-pork", "Schwein"], "rind": ["t-beef", "Rind"], "lamm": ["t-beef", "Lamm"], "wild": ["t-beef", "Wild"] };
+  var GEH = [5, 10, 15, 30];                 // Minuten zu Fuß -> Meter (80 m/min)
+  var S = { ort: 0, radius: 1000, veg: false, zaehl: "beides" };
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
-
-  function km(a, b, c, d) { var R = 6371, x = (c - a) * Math.PI / 180, y = (d - b) * Math.PI / 180;
+  function m(a, b, c, d) { var R = 6371000, x = (c - a) * Math.PI / 180, y = (d - b) * Math.PI / 180;
     var h = Math.sin(x / 2) * Math.sin(x / 2) + Math.cos(a * Math.PI / 180) * Math.cos(c * Math.PI / 180) * Math.sin(y / 2) * Math.sin(y / 2);
-    return 2 * R * Math.asin(Math.sqrt(h)) * 1000; }
-  function fmtM(m) { return m < 1000 ? Math.round(m / 50) * 50 + " m" : (m / 1000).toFixed(1).replace(".", ",") + " km"; }
-  function fmtGeh(m) { return "≈ " + Math.max(1, Math.round(m / 80)) + " min zu Fuß"; }
-  function fmtR(r) { return r < 1000 ? r + " m" : r / 1000 + " km"; }
-  function euro(n) { return n == null ? "" : n.toFixed(2).replace(".", ",") + " €"; }
+    return 2 * R * Math.asin(Math.sqrt(h)); }
+  function fmtR(r) { return r == null ? "egal" : r < 1000 ? r + " m" : (r / 1000).toString().replace(".", ",") + " km"; }
 
-  // Was QSC liefern würde: Gerichte mit Entfernung, Facette pro Ring (kumulativ), unabhängig vom eigenen Radius
-  function compute() {
-    var o = DATA.orte[S.ort];
-    var dist = {};
-    DATA.kantinen.forEach(function (k) { dist[k.id] = km(o.lat, o.lon, k.lat, k.lon); });
-    var base = DATA.dishes.filter(function (d) { return !S.veg || d.veg; });
-    var facet = RINGE.map(function (r) {
-      var ds = base.filter(function (d) { return dist[d.k] <= r; });
-      var ks = {}; ds.forEach(function (d) { ks[d.k] = 1; });
-      return { r: r, gerichte: ds.length, kantinen: Object.keys(ks).length };
-    });
-    var all = { r: null, gerichte: base.length, kantinen: (function () { var ks = {}; base.forEach(function (d) { ks[d.k] = 1; }); return Object.keys(ks).length; })() };
-    var hits = base.filter(function (d) { return S.radius == null || dist[d.k] <= S.radius; });
-    return { o: o, dist: dist, facet: facet, all: all, hits: hits };
+  // Was QSC liefern würde
+  function counts(radius) {
+    var o = DATA.orte[S.ort], dist = {};
+    DATA.kantinen.forEach(function (k) { dist[k.id] = m(o.lat, o.lon, k.lat, k.lon); });
+    var ds = DATA.dishes.filter(function (d) { return (!S.veg || d.veg) && (radius == null || dist[d.k] <= radius); });
+    var ks = {}; ds.forEach(function (d) { ks[d.k] = 1; });
+    return { g: ds.length, k: Object.keys(ks).length, dist: dist };
   }
-
-  function label(f) {
-    if (V.zaehler === "keine") return "";
-    var g = f.gerichte + " Gericht" + (f.gerichte === 1 ? "" : "e"), k = f.kantinen + " Kantine" + (f.kantinen === 1 ? "" : "n");
-    return "<small>" + (V.zaehler === "gerichte" ? f.gerichte : V.zaehler === "kantinen" ? k : k + " · " + g) + "</small>";
+  function txt(c, short) {
+    var g = c.g + (short ? "" : " Gericht" + (c.g === 1 ? "" : "e")), k = c.k + " Kantine" + (c.k === 1 ? "" : "n");
+    return S.zaehl === "gerichte" ? (short ? c.g : g) : S.zaehl === "kantinen" ? k : k + " · " + c.g + (short ? "" : " Ger.");
   }
-
-  function renderRadius(r) {
-    var box = $("radius");
-    if (V.radiusui === "chips") {
-      box.innerHTML = '<div class="lbl" style="margin-bottom:6px">Radius</div><div class="chips">' +
-        r.facet.map(function (f) {
-          return '<button class="chip" data-r="' + f.r + '" aria-pressed="' + (S.radius === f.r) + '"' + (f.gerichte ? "" : " disabled") + ">" + fmtR(f.r) + " " + label(f) + "</button>";
-        }).join("") + '<button class="chip" data-r="alle" aria-pressed="' + (S.radius == null) + '">egal ' + label(r.all) + "</button></div>";
-    } else {
-      // Bänder statt kumulativ: 0–500, 500–1000, …
-      var prev = 0, bands = r.facet.map(function (f) { var n = f.gerichte - prev; prev = f.gerichte; return n; });
-      var max = Math.max.apply(null, bands.concat([1]));
-      box.innerHTML = '<div class="lbl">Entfernung · ' + (S.radius ? "bis " + fmtR(S.radius) : "egal") + '</div><div class="hist"><div class="bars">' +
-        bands.map(function (n, i) { return '<span class="' + (S.radius == null || RINGE[i] <= S.radius ? "in" : "") + '" style="height:' + Math.max(4, n / max * 100) + '%" title="' + n + ' Gerichte"></span>'; }).join("") +
-        '</div><div class="ticks">' + RINGE.map(function (x, i) { return "<span>" + (i ? fmtR(RINGE[i - 1]) + "–" : "bis ") + fmtR(x) + "</span>"; }).join("") + '</div>' +
-        '<div class="chips" style="margin-top:6px">' + RINGE.map(function (x) { return '<button class="chip" data-r="' + x + '" aria-pressed="' + (S.radius === x) + '">' + fmtR(x) + "</button>"; }).join("") +
-        '<button class="chip" data-r="alle" aria-pressed="' + (S.radius == null) + '">egal</button></div></div>';
+  function result() {
+    var c = counts(S.radius);
+    if (!c.g) {
+      var next = RINGE.filter(function (r) { return (S.radius == null || r > S.radius) && counts(r).g; })[0];
+      return "<b>Nichts" + (S.veg ? " Vegetarisches" : "") + " im Umkreis von " + fmtR(S.radius) + ".</b>" +
+        (next ? ' <button class="cta" data-r="' + next + '">Auf ' + fmtR(next) + " erweitern (" + txt(counts(next)) + ")</button>" : "");
     }
+    return "Ergebnis: <b>" + txt(c) + "</b> " + (S.radius ? "im Umkreis von " + fmtR(S.radius) : "ohne Umkreis") + " um " + esc(DATA.orte[S.ort].name);
   }
-
-  function distHtml(m) {
-    if (V.einheit === "meter") return "<b>" + fmtM(m) + "</b>";
-    if (V.einheit === "gehzeit") return "<b>" + fmtGeh(m).replace(" zu Fuß", "") + "</b><small>zu Fuß</small>";
-    return "<b>" + fmtGeh(m).replace(" zu Fuß", "") + "</b><small>" + fmtM(m) + " Luftlinie</small>";
+  function card(k, title, why, body) {
+    return '<section class="card" aria-label="Variante ' + k + '"><header><span class="k">' + k + '</span><h2>' + title + '</h2></header><p class="why">' + why + "</p>" + body + '<div class="res">' + result() + "</div></section>";
   }
+  var opts = RINGE.concat([null]);
 
-  function tray(id, items, m) {
-    var k = DATA.kantinen.filter(function (x) { return x.id === id; })[0];
-    return '<section class="tray"><div class="tray-head"><div><h2>' + esc(k.name) + '</h2><div class="where">' + esc(k.adresse) + '</div></div><div class="dist">' + distHtml(m) + "</div></div>" +
-      items.map(function (d) {
-        var t = TAG[d.art] || ["t-veg", d.art];
-        return '<div class="dish"><span>' + esc(d.g) + '</span><span class="p">' + euro(d.preis) + '</span><span class="tag ' + t[0] + '">' + t[1] + "</span></div>";
-      }).join("") + "</section>";
+  // A — Chips mit Zählern
+  function vA() {
+    return card("A", "Chips mit Zählern", "Schnell, eindeutig, gut auf dem Handy. Meine Empfehlung.",
+      '<div class="lbl">Umkreis</div><div class="chips">' + opts.map(function (r) {
+        var c = counts(r);
+        return '<button class="chip" data-r="' + (r == null ? "alle" : r) + '" aria-pressed="' + (S.radius === r) + '"' + (c.g ? "" : " disabled") + ">" + fmtR(r) + ' <span class="n">' + txt(c, true) + "</span></button>";
+      }).join("") + "</div>");
   }
-
-  function renderList(r) {
-    var g = {}; r.hits.forEach(function (d) { (g[d.k] = g[d.k] || []).push(d); });
-    var ids = Object.keys(g).sort(function (a, b) { return S.sort === "naehe" ? r.dist[a] - r.dist[b] : ORDER.indexOf(a) - ORDER.indexOf(b); });
-    var html = "";
-    if (!ids.length) {
-      var next = r.facet.filter(function (f) { return f.gerichte > 0 && (S.radius == null || f.r > S.radius); })[0];
-      html = '<div class="empty"><b>Im Umkreis von ' + fmtR(S.radius) + " gibt es heute " + (S.veg ? "nichts Vegetarisches" : "keine Kantine") + ".</b>" +
-        (next ? "<span>Bei " + fmtR(next.r) + " wären es " + next.kantinen + " Kantine" + (next.kantinen === 1 ? "" : "n") + " mit " + next.gerichte + " Gericht" + (next.gerichte === 1 ? "" : "en") + ".</span>" +
-          '<button class="btn" data-r="' + next.r + '">Auf ' + fmtR(next.r) + " erweitern</button>" : "<span>Auch im weiteren Umkreis nichts gefunden.</span>") + "</div>";
-    } else if (V.gruppen === "ringe" && S.sort === "naehe") {
-      var last = -1;
-      ids.forEach(function (id) {
-        var m = r.dist[id], ring = RINGE.filter(function (x) { return m <= x; })[0] || null;
-        if (ring !== last) {
-          var i = RINGE.indexOf(ring);
-          html += '<div class="ring">' + (ring == null ? "Weiter als 5 km" : i === 0 ? "Unter " + fmtR(ring) : fmtR(RINGE[i - 1]) + " – " + fmtR(ring)) + "</div>";
-          last = ring;
-        }
-        html += tray(id, g[id], m);
-      });
-    } else ids.forEach(function (id) { html += tray(id, g[id], r.dist[id]); });
-    $("list").innerHTML = html;
-    var nk = ids.length;
-    $("count").textContent = r.hits.length + " Gerichte in " + nk + " Kantine" + (nk === 1 ? "" : "n") + (S.radius ? " im Umkreis von " + fmtR(S.radius) : "") + " um " + r.o.name;
+  // B — Radio-Facette
+  function vB() {
+    return card("B", "Radio-Facette", "Wie Entfernungsfilter in Onlineshops. Vertraut, braucht aber mehr Höhe.",
+      '<div class="lbl">Entfernung</div><div class="radios" role="radiogroup">' + opts.map(function (r) {
+        var c = counts(r);
+        return '<label class="radio' + (c.g ? "" : " off") + '"><input type="radio" name="b" data-r="' + (r == null ? "alle" : r) + '"' + (S.radius === r ? " checked" : "") + (c.g ? "" : " disabled") + '><span class="t">' + (r == null ? "Egal" : "Bis " + fmtR(r)) + '</span><span class="n">' + txt(c, true) + "</span></label>";
+      }).join("") + "</div>");
   }
-
-  // Schematische Karte (lokale Projektion, keine Kacheln)
-  function renderMap(r) {
-    if (V.karte !== "an") { $("map").innerHTML = ""; return; }
-    var W = 760, H = 300, o = r.o, R = S.radius || 5000;
-    var span = Math.max(R * 1.25, 1200); // Meter je halbe Höhe
-    var mPerLat = 111320, mPerLon = 111320 * Math.cos(o.lat * Math.PI / 180);
-    var scale = (H / 2) / span;
-    function xy(lat, lon) { return [W / 2 + (lon - o.lon) * mPerLon * scale, H / 2 - (lat - o.lat) * mPerLat * scale]; }
-    var inR = {}; r.hits.forEach(function (d) { inR[d.k] = 1; });
-    var svg = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Schematische Karte der Kantinen um ' + esc(o.name) + '">' +
-      '<rect width="' + W + '" height="' + H + '" fill="var(--bg)"></rect>' +
-      (S.radius ? '<circle cx="' + W / 2 + '" cy="' + H / 2 + '" r="' + S.radius * scale + '" fill="color-mix(in srgb, var(--accent) 12%, transparent)" stroke="var(--accent)" stroke-dasharray="5 4"></circle>' : "") +
-      (function () {
-        // Beschriftungen ohne Überlappung: rechts, links, darüber oder darunter, was zuerst frei ist
-        var boxes = [[W / 2 - 4, H / 2 - 22, W / 2 + 10 + o.name.length * 7, H / 2 - 4]], out = "";
-        var hit = function (b) { return boxes.some(function (c) { return b[0] < c[2] && b[2] > c[0] && b[1] < c[3] && b[3] > c[1]; }); };
-        DATA.kantinen.slice().sort(function (a, b) { return xy(b.lat, b.lon)[1] - xy(a.lat, a.lon)[1]; }).forEach(function (k) {
-          var p = xy(k.lat, k.lon), on = !!inR[k.id];
-          if (p[0] < -20 || p[0] > W + 20 || p[1] < -20 || p[1] > H + 20) return;
-          var name = k.name.replace(/ \(.*\)/, ""), tw = name.length * 6.6;
-          var opts = [[p[0] + 11, p[1] + 4, "start"], [p[0] - 11, p[1] + 4, "end"], [p[0], p[1] - 12, "middle"], [p[0], p[1] + 20, "middle"]];
-          var pick = opts[0];
-          for (var i = 0; i < opts.length; i++) {
-            var q = opts[i], x0 = q[2] === "start" ? q[0] : q[2] === "end" ? q[0] - tw : q[0] - tw / 2;
-            var b = [x0 - 2, q[1] - 12, x0 + tw + 2, q[1] + 3];
-            if (!hit(b) && b[0] >= 0 && b[2] <= W) { pick = q; boxes.push(b); break; }
-            if (i === opts.length - 1) boxes.push(b);
-          }
-          boxes.push([p[0] - 8, p[1] - 8, p[0] + 8, p[1] + 8]);
-          out += '<g><circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="7" fill="' + (on ? "var(--accent)" : "var(--surface)") + '" stroke="' + (on ? "var(--accent)" : "var(--muted)") + '" stroke-width="2"></circle>' +
-            '<text x="' + pick[0].toFixed(1) + '" y="' + pick[1].toFixed(1) + '" text-anchor="' + pick[2] + '" font-size="12" fill="' + (on ? "var(--ink)" : "var(--muted)") + '">' + esc(name) + "</text></g>";
-        });
-        return out;
-      })() +
-      '<g><circle cx="' + W / 2 + '" cy="' + H / 2 + '" r="6" fill="var(--pork)"></circle><text x="' + (W / 2 + 10) + '" y="' + (H / 2 - 8) + '" font-size="12" font-weight="600" fill="var(--ink)">' + esc(o.name) + "</text></g></svg>";
-    $("map").innerHTML = '<div class="map">' + svg + '<div class="cap">Schema ohne Kartenkacheln, maßstabsgetreu um den Mittelpunkt. Gefüllt = im Radius.</div></div>';
+  // C — Dropdowns
+  function vC() {
+    return card("C", "Kompakte Dropdowns", "Spart Platz, z. B. in einer Filterleiste über den Ergebnissen. Zahlen erst nach dem Öffnen sichtbar.",
+      '<div class="selrow"><select class="sel" data-sel="ort" aria-label="Mittelpunkt">' + DATA.orte.map(function (o, i) { return '<option value="' + i + '"' + (i === S.ort ? " selected" : "") + ">" + esc(o.name) + "</option>"; }).join("") +
+      '</select><select class="sel" data-sel="radius" aria-label="Umkreis">' + opts.map(function (r) {
+        var c = counts(r); return '<option value="' + (r == null ? "alle" : r) + '"' + (S.radius === r ? " selected" : "") + (c.g ? "" : " disabled") + ">" + (r == null ? "Egal" : fmtR(r)) + " (" + txt(c, true) + ")</option>";
+      }).join("") + "</select></div>");
+  }
+  // D — Stufen-Slider mit Bändern
+  function vD() {
+    var cum = RINGE.map(function (r) { return counts(r).g; }), prev = 0;
+    var bands = cum.map(function (c) { var n = c - prev; prev = c; return n; }), max = Math.max.apply(null, bands.concat([1]));
+    var idx = S.radius == null ? RINGE.length : RINGE.indexOf(S.radius);
+    return card("D", "Stufen-Slider mit Histogramm", "Gleiche Optik wie Preis/Kalorien. Balken zeigen Bänder (z. B. 500 m–1 km), nicht kumulativ.",
+      '<div class="lbl">Entfernung · ' + fmtR(S.radius) + '</div><div class="bars" aria-hidden="true">' + bands.map(function (n, i) {
+        return '<span class="' + (idx >= i ? "in" : "") + '" style="height:' + Math.max(4, n / max * 100) + '%" title="' + n + '"></span>'; }).join("") +
+      '<span class="' + (idx >= RINGE.length ? "in" : "") + '" style="height:' + Math.max(4, (counts(null).g - cum[cum.length - 1]) / max * 100) + '%"></span></div>' +
+      '<input type="range" min="0" max="' + RINGE.length + '" step="1" value="' + (idx < 0 ? 1 : idx) + '" data-slider="d" aria-label="Umkreis">' +
+      '<div class="ticks">' + RINGE.map(fmtR).concat(["egal"]).map(function (t) { return "<span>" + t + "</span>"; }).join("") + "</div>");
+  }
+  // E — Gehzeit
+  function vE() {
+    return card("E", "Gehzeit statt Meter", "Denkt in Mittagspause: „5 min zu Fuß“. Intern 80 m/min auf Luftlinie, also grob.",
+      '<div class="lbl">Wie weit willst du laufen?</div><div class="chips">' + GEH.map(function (min) {
+        var r = min * 80, c = counts(r);
+        return '<button class="chip" data-r="' + r + '" aria-pressed="' + (S.radius === r) + '"' + (c.g ? "" : " disabled") + ">" + min + ' min <span class="n">' + txt(c, true) + "</span></button>";
+      }).join("") + '<button class="chip" data-r="alle" aria-pressed="' + (S.radius == null) + '">egal <span class="n">' + txt(counts(null), true) + "</span></button></div>" +
+      '<div class="hint">5 min ≈ 400 m · 10 min ≈ 800 m · 15 min ≈ 1,2 km · 30 min ≈ 2,4 km</div>');
+  }
+  // F — Filter-Satz
+  function vF() {
+    return card("F", "Filter als Satz", "Liest sich wie eine Frage. Gut als Kopfzeile, weniger gut mit vielen weiteren Filtern.",
+      '<div class="sentence">Mittagessen in <select data-sel="radius" aria-label="Umkreis">' + opts.map(function (r) {
+        var c = counts(r); return '<option value="' + (r == null ? "alle" : r) + '"' + (S.radius === r ? " selected" : "") + ">" + (r == null ? "beliebiger Entfernung" : fmtR(r)) + " (" + txt(c, true) + ")</option>";
+      }).join("") + '</select> um <select data-sel="ort" aria-label="Mittelpunkt">' + DATA.orte.map(function (o, i) { return '<option value="' + i + '"' + (i === S.ort ? " selected" : "") + ">" + esc(o.name) + "</option>"; }).join("") + "</select></div>");
+  }
+  // G — Zielscheibe
+  function vG() {
+    var W = 320, H = 230, cx = W / 2, cy = H / 2, sc = [30, 55, 82, 110];
+    var html = '<svg class="target" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Ringe zum Anklicken">';
+    for (var i = RINGE.length - 1; i >= 0; i--) {
+      var r = RINGE[i], on = S.radius != null && r <= S.radius, c = counts(r);
+      html += '<circle class="ring" data-r="' + r + '" cx="' + cx + '" cy="' + cy + '" r="' + sc[i] + '" fill="' + (on ? "color-mix(in srgb, var(--accent) " + (30 - i * 5) + "%, var(--surface))" : "var(--surface)") + '" stroke="' + (S.radius === r ? "var(--accent)" : "var(--line)") + '" stroke-width="' + (S.radius === r ? 2.5 : 1.5) + '"><title>' + fmtR(r) + ": " + txt(c) + "</title></circle>";
+    }
+    RINGE.forEach(function (r, i) {
+      var c = counts(r), inner = i ? sc[i - 1] : 0, yb = cy + (inner + sc[i]) / 2 + 4;
+      html += '<text x="' + cx + '" y="' + (cy - sc[i] + 13) + '" font-size="10.5" text-anchor="middle" fill="var(--muted)" pointer-events="none">' + fmtR(r) + "</text>" +
+        '<text x="' + cx + '" y="' + yb + '" font-size="12" font-weight="600" text-anchor="middle" fill="var(--ink)" pointer-events="none">' + (S.zaehl === "kantinen" ? c.k : c.g) + "</text>";
+    });
+    html += '<circle cx="' + cx + '" cy="' + cy + '" r="4" fill="var(--pin)"></circle></svg>';
+    return card("G", "Zielscheibe", "Ring anklicken. Anschaulich und ungewöhnlich, Zahlen stehen in den Ringen. Eher Spielerei.",
+      html + '<div class="hint">Zahl im Ring = ' + (S.zaehl === "kantinen" ? "Kantinen" : "Gerichte") + " bis zu diesem Radius</div>");
+  }
+  // H — Karte mit ziehbarem Radius
+  function vH() {
+    var W = 360, H = 240, o = DATA.orte[S.ort], span = 2600, scale = (H / 2) / span;
+    var mLat = 111320, mLon = 111320 * Math.cos(o.lat * Math.PI / 180);
+    var R = S.radius == null ? null : S.radius;
+    var c = counts(R), html = '<div class="map"><svg viewBox="0 0 ' + W + " " + H + '" id="hmap" role="img" aria-label="Karte mit Radius">' +
+      '<rect width="' + W + '" height="' + H + '" fill="var(--bg)"></rect>';
+    if (R != null) html += '<circle cx="' + W / 2 + '" cy="' + H / 2 + '" r="' + Math.min(R * scale, 400) + '" fill="color-mix(in srgb, var(--accent) 12%, transparent)" stroke="var(--accent)" stroke-dasharray="5 4"></circle>' +
+      '<circle data-handle="1" cx="' + (W / 2 + R * scale) + '" cy="' + H / 2 + '" r="8" fill="var(--surface)" stroke="var(--accent)" stroke-width="2.5" style="cursor:ew-resize"></circle>';
+    DATA.kantinen.forEach(function (k) {
+      var x = W / 2 + (k.lon - o.lon) * mLon * scale, y = H / 2 - (k.lat - o.lat) * mLat * scale, on = R == null || c.dist[k.id] <= R;
+      html += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="5.5" fill="' + (on ? "var(--accent)" : "var(--surface)") + '" stroke="' + (on ? "var(--accent)" : "var(--muted)") + '" stroke-width="1.8"><title>' + esc(k.name) + "</title></circle>";
+    });
+    html += '<circle cx="' + W / 2 + '" cy="' + H / 2 + '" r="4.5" fill="var(--pin)"></circle>' +
+      '<text x="10" y="20" font-size="12" font-weight="600" fill="var(--ink)">' + fmtR(R) + " · " + txt(c) + "</text></svg></div>";
+    return card("H", "Karte mit ziehbarem Radius", "Griff am Kreis ziehen, rastet auf 100 m ein. Am anschaulichsten, braucht aber Platz und echte Karten später.",
+      html + '<div class="hint">Schema ohne Kartenkacheln. Zum Start einen Radius wählen, dann am Griff ziehen.</div>');
   }
 
   function render() {
-    var r = compute();
+    $("grid").innerHTML = vA() + vB() + vC() + vD() + vE() + vF() + vG() + vH();
     $("ort").value = String(S.ort); $("veg").checked = S.veg;
-    renderRadius(r); renderList(r); renderMap(r);
-    Array.prototype.forEach.call(document.querySelectorAll(".variants button"), function (b) { b.setAttribute("aria-pressed", String(V[b.dataset.v] === b.dataset.x)); });
-    Array.prototype.forEach.call(document.querySelectorAll("[data-sort]"), function (b) { b.setAttribute("aria-pressed", String(S.sort === b.dataset.sort)); });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-zaehl]"), function (b) { b.setAttribute("aria-pressed", String(S.zaehl === b.dataset.zaehl)); });
   }
+  function setR(v) { S.radius = v === "alle" || v == null ? null : +v; render(); }
 
   $("ort").innerHTML = DATA.orte.map(function (o, i) { return '<option value="' + i + '">' + esc(o.name) + "</option>"; }).join("");
   $("ort").addEventListener("change", function () { S.ort = +this.value; render(); });
   $("veg").addEventListener("change", function () { S.veg = this.checked; render(); });
   document.addEventListener("click", function (e) {
-    var b = e.target.closest("button"); if (!b || b.disabled) return;
-    if (b.dataset.v) { V[b.dataset.v] = b.dataset.x; render(); }
-    else if (b.dataset.r) { S.radius = b.dataset.r === "alle" ? null : +b.dataset.r; render(); }
-    else if (b.dataset.sort) { S.sort = b.dataset.sort; render(); }
+    var t = e.target.closest("[data-r], [data-zaehl]"); if (!t || t.disabled) return;
+    if (t.dataset.zaehl) { S.zaehl = t.dataset.zaehl; render(); return; }
+    if (t.tagName !== "INPUT") setR(t.dataset.r);
+  });
+  document.addEventListener("change", function (e) {
+    var t = e.target;
+    if (t.type === "radio" && t.dataset.r) setR(t.dataset.r);
+    else if (t.dataset.sel === "ort") { S.ort = +t.value; render(); }
+    else if (t.dataset.sel === "radius") setR(t.value);
+  });
+  document.addEventListener("input", function (e) {
+    if (e.target.dataset.slider === "d") { var i = +e.target.value; S.radius = i >= RINGE.length ? null : RINGE[i]; render(); var s = document.querySelector('[data-slider="d"]'); if (s) s.focus(); }
+  });
+  // Karte H: Griff ziehen
+  var drag = false;
+  document.addEventListener("pointerdown", function (e) { if (e.target.dataset && e.target.dataset.handle) { drag = true; e.preventDefault(); } });
+  document.addEventListener("pointerup", function () { drag = false; });
+  document.addEventListener("pointermove", function (e) {
+    if (!drag) return;
+    var svg = $("hmap"); if (!svg) return;
+    var b = svg.getBoundingClientRect(), W = 360, H = 240, scale = (H / 2) / 2600;
+    var x = (e.clientX - b.left) / b.width * W, y = (e.clientY - b.top) / b.height * H;
+    var r = Math.sqrt(Math.pow(x - W / 2, 2) + Math.pow(y - H / 2, 2)) / scale;
+    S.radius = Math.max(100, Math.min(5000, Math.round(r / 100) * 100));
+    render();
   });
   render();
 })();
