@@ -147,6 +147,44 @@ footer a { color: inherit; }
   .tray { animation: rise .25s ease-out both; }
   @keyframes rise { from { transform: translateY(4px); opacity: .6; } to { transform: none; opacity: 1; } }
 }
+
+/* Gruppe: Gast / Studierende / Bedienstete */
+.seg { display: inline-flex; border: 1.5px solid var(--line); border-radius: 999px; padding: 2px; background: var(--surface); }
+.seg button { font: inherit; font-size: 0.85rem; border: 0; background: transparent; color: var(--muted); padding: 4px 11px; border-radius: 999px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+
+/* Filterpanel */
+details.more { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+details.more > summary { list-style: none; cursor: pointer; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; font-weight: 600; }
+details.more > summary::-webkit-details-marker { display: none; }
+details.more > summary::after { content: "▾"; color: var(--muted); transition: transform .15s; }
+details.more[open] > summary::after { transform: rotate(180deg); }
+details.more > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius); }
+.badge { background: var(--accent); color: var(--accent-ink); border-radius: 999px; font-size: 0.75rem; padding: 0 8px; margin-left: 6px; font-variant-numeric: tabular-nums; }
+.panel { display: grid; gap: 16px; padding: 4px 14px 16px; }
+.panel .row .lbl { min-width: 0; width: 100%; margin-bottom: 2px; }
+.reset-all { font: inherit; font-size: 0.85rem; background: none; border: 0; color: var(--accent); cursor: pointer; text-decoration: underline; padding: 0; justify-self: start; }
+
+/* Slider mit Histogramm */
+.range { display: grid; gap: 4px; }
+.range .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.range .val { font-variant-numeric: tabular-nums; font-size: 0.9rem; font-weight: 600; }
+.hist { display: flex; align-items: flex-end; gap: 2px; height: 44px; padding: 0 9px; }
+.hist span { flex: 1 1 0; min-width: 2px; background: var(--line); border-radius: 2px 2px 0 0; }
+.hist span.in { background: color-mix(in srgb, var(--accent) 70%, transparent); }
+.dual { position: relative; height: 22px; margin: 0 0 2px; }
+.dual input[type=range] { position: absolute; inset: 0; width: 100%; margin: 0; background: none; pointer-events: none; -webkit-appearance: none; appearance: none; }
+.dual input[type=range]::-webkit-slider-runnable-track { height: 4px; background: transparent; }
+.dual input[type=range]::-moz-range-track { height: 4px; background: transparent; }
+.dual input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; width: 18px; height: 18px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); margin-top: -7px; cursor: pointer; }
+.dual input[type=range]::-moz-range-thumb { pointer-events: auto; width: 14px; height: 14px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); cursor: pointer; }
+.dual input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+.dual .rail { position: absolute; left: 9px; right: 9px; top: 9px; height: 4px; background: var(--line); border-radius: 2px; }
+.dual .fill { position: absolute; top: 9px; height: 4px; background: var(--accent); border-radius: 2px; }
+.range .scale { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; padding: 0 2px; }
+.allerg { color: var(--muted); font-size: 0.78rem; }
 </style>
 </head>
 <body>
@@ -162,9 +200,25 @@ footer a { color: inherit; }
       <button class="clear" id="clear" type="button" aria-label="Suche leeren" hidden>×</button>
     </div>
     <nav class="days" id="days" aria-label="Tag wählen"></nav>
+    <div class="toolbar">
+      <div class="seg" id="gruppe" role="group" aria-label="Preise anzeigen für">
+        <button type="button" data-gruppe="gast">Gast</button><button type="button" data-gruppe="student">Studierende</button><button type="button" data-gruppe="bedienstet">Bedienstete</button>
+      </div>
+    </div>
     <div class="filters">
-      <div class="row" id="arten" role="group" aria-label="Art"><span class="lbl">Art</span></div>
-      <div class="row" id="kantinen" role="group" aria-label="Kantinen"><span class="lbl">Kantinen</span></div>
+      <div class="row" id="arten" role="group" aria-label="Ernährung"><span class="lbl">Ernährung</span></div>
+      <details class="more" id="more">
+        <summary><span>Weitere Filter<span class="badge" id="nmore" hidden></span></span></summary>
+        <div class="panel">
+          <div class="range" id="r-preis"></div>
+          <div class="range" id="r-kcal"></div>
+          <div class="row" id="ohne" role="group" aria-label="Frei von"><span class="lbl">Frei von (laut Allergenangabe)</span></div>
+          <div class="row" id="zutaten" role="group" aria-label="Zutaten"><span class="lbl">Zutaten</span></div>
+          <div class="row" id="typ" role="group" aria-label="Gerichtstyp"><span class="lbl">Gerichtstyp</span></div>
+          <div class="row" id="kantinen" role="group" aria-label="Kantinen"><span class="lbl">Kantinen</span></div>
+          <button type="button" class="reset-all" id="resetall">Alle Filter zurücksetzen</button>
+        </div>
+      </details>
     </div>
   </header>
 
@@ -172,8 +226,9 @@ footer a { color: inherit; }
   <main id="list" aria-live="polite"></main>
 
   <footer>
-    <div>Daten aus den Speiseplänen der Kantinen. Angaben ohne Gewähr. Preise: Gästepreis, Details am Gericht. Keine Kantine gewählt = alle.</div>
-    <div>„vermutlich vegetarisch“ heißt: im Namen kein Fleisch erkannt. Allergene bitte vor Ort prüfen.</div>
+    <div>Daten aus den Speiseplänen der Kantinen. Angaben ohne Gewähr. Der Preisfilter nutzt den Gästepreis; angezeigt wird der Preis der gewählten Gruppe.</div>
+    <div>Kalorien mit „ca.“ sind geschätzt. „Frei von“ nur, wo die Kantine Allergene angibt. Allergene bitte vor Ort prüfen.</div>
+    <div>„vermutlich vegetarisch“ heißt: im Namen kein Fleisch erkannt.</div>
     <div>Suche powered by Quasiris Search Cloud.</div>
   </footer>
 </div>
@@ -181,74 +236,112 @@ footer a { color: inherit; }
 <script>
 (function () {
   "use strict";
-  // Alle Filter laufen über QSC: f.tag, f.merkmale, f.kantine. Der Browser gruppiert nur noch die Anzeige.
+  // Alle Filter laufen über die QSC-Such-API. Der Browser baut nur die Anfrage und gruppiert die Anzeige.
+  // ODER: f.<feld>=a&f.<feld>=b   UND: f.<feld>.and=a&f.<feld>.and=b
   var API = "https://qsc-dev.quasiris.de/api/v1/search/tbl/mittago";
   var TAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
-  var MERKMALE = [
-    { id: "vegetarisch", label: "Vegetarisch" },
-    { id: "vegan", label: "Vegan" },
-    { id: "fisch", label: "Fisch" },
-    { id: "gefluegel", label: "Geflügel" },
-    { id: "ohne-schwein", label: "Ohne Schwein" }
-  ];
+  var LABEL = {
+    merkmale: { "vegetarisch": "Vegetarisch", "vegan": "Vegan", "pescetarisch": "Pescetarisch", "ohne-schwein": "Ohne Schwein", "ohne-alkohol": "Ohne Alkohol", "fisch": "Fisch", "gefluegel": "Geflügel" },
+    frei_von: { "gluten": "Gluten", "milch": "Milch/Laktose", "ei": "Ei", "nuesse": "Nüsse", "soja": "Soja" },
+    zutaten: { "kartoffeln": "Kartoffeln", "pommes": "Pommes", "nudeln": "Nudeln", "reis": "Reis", "brot": "Brot", "kaese": "Käse", "ei": "Ei", "pilze": "Pilze", "kuerbis": "Kürbis", "huelsenfruechte": "Hülsenfrüchte", "tofu-soja": "Tofu/Soja", "kohl": "Kohl", "spinat": "Spinat", "salat": "Salat", "tomate": "Tomate", "curry": "Curry" },
+    gerichtstyp: { "hauptgericht": "Hauptgericht", "suppe-eintopf": "Suppe/Eintopf", "salat": "Salat", "suess": "Süßes", "offen": "Noch offen" },
+    allergene: { "gluten": "Gluten", "milch": "Milch", "ei": "Ei", "nuesse": "Nüsse", "erdnuss": "Erdnuss", "soja": "Soja", "sellerie": "Sellerie", "senf": "Senf", "sesam": "Sesam", "fisch": "Fisch", "krebstiere": "Krebstiere", "weichtiere": "Weichtiere", "sulfite": "Sulfite", "lupine": "Lupine" }
+  };
+  var MERKMAL_ORDER = ["vegetarisch", "vegan", "pescetarisch", "ohne-schwein", "ohne-alkohol", "fisch", "gefluegel"];
   var TAG = {
     "vegan": ["veg", "vegan"], "vegetarisch": ["veg", "vegetarisch"], "vegetarisch?": ["veg", "vermutlich vegetarisch"],
     "fisch": ["fish", "Fisch"], "gefluegel": ["bird", "Geflügel"], "schwein": ["pork", "Schwein"],
     "rind": ["beef", "Rind"], "lamm": ["beef", "Lamm"], "wild": ["beef", "Wild"], "unbekannt": ["unk", "noch offen"]
   };
   var ORDER = ["tks", "sparkasse", "bergstrom", "stw-fh", "stw-uni", "stw-schlueter", "stw-leipziger"];
-  // Kurze IDs für die URL (Lesezeichen), Namen für den QSC-Filter f.kantine
   var KANTINE = {
     "tks": "Casino im Justizzentrum", "sparkasse": "Sparkasse Kantine", "bergstrom": "Kantine am Bergstrom",
     "stw-fh": "Mensa Altonaer Straße (FH)", "stw-uni": "Mensa Nordhäuser Straße (Uni)",
     "stw-schlueter": "Cafeteria Schlüterstraße (FH)", "stw-leipziger": "Cafeteria Leipziger Straße (FH)"
   };
+  var GRUPPEN = { gast: "preis_gast", student: "preis_student", bedienstet: "preis_bedienstet" };
+  // Slider-Stufen (müssen zu preis_stufe / kcal_stufe aus dem Feeding passen)
+  var PREIS = { field: "preis_stufe", step: 0.5, min: 2, max: 12, fmt: function (v) { return v.toFixed(2).replace(".", ",") + " €"; }, key: function (v) { return v.toFixed(2); } };
+  var KCAL = { field: "kcal_stufe", step: 100, min: 0, max: 1200, fmt: function (v) { return v + " kcal"; }, key: function (v) { return String(v); } };
+
   function kantineId(name) { for (var k in KANTINE) if (KANTINE[k] === name) return k; return null; }
 
-  var state = { day: null, merkmal: null, kantinen: [], q: "", tage: [], seq: 0, urlDay: null };
-
-  // Zustand aus der URL (Lesezeichen) – sonst die letzte Auswahl dieses Browsers
-  (function readState() {
-    var p = new URLSearchParams(location.search);
-    var hatUrl = p.has("art") || p.has("k") || p.has("q") || p.has("tag");
-    if (hatUrl) {
-      state.merkmal = p.get("art") || null;
-      state.kantinen = p.getAll("k").map(function (id) { return KANTINE[id]; }).filter(Boolean);
-      state.q = (p.get("q") || "").trim();
-      state.urlDay = p.get("tag"); // "woche" oder JJJJ-MM-TT; fehlt = heute
-    } else {
-      try { state.merkmal = localStorage.getItem("mittago.merkmal") || null; } catch (e) {}
-      try { state.kantinen = JSON.parse(localStorage.getItem("mittago.kantinen") || "[]") || []; } catch (e) { state.kantinen = []; }
-    }
-  })();
-
-  // Auswahl in die URL schreiben, damit Lesezeichen und geteilte Links sie mitnehmen
-  function writeUrl() {
-    var p = new URLSearchParams();
-    if (state.q) p.set("q", state.q);
-    if (state.day === "alle") p.set("tag", "woche");
-    else if (state.day && state.day !== state.defaultDay) p.set("tag", state.day);
-    if (state.merkmal) p.set("art", state.merkmal);
-    state.kantinen.forEach(function (n) { var id = kantineId(n); if (id) p.append("k", id); });
-    var qs = p.toString();
-    history.replaceState(null, "", location.pathname + (qs ? "?" + qs : ""));
-  }
+  var state = {
+    day: null, defaultDay: null, urlDay: null, tage: [], seq: 0, q: "",
+    gruppe: "gast", merkmale: [], ohne: [], zutaten: [], typ: [], kantinen: [],
+    preis: null, kcal: null // [von, bis] als Stufen-Untergrenzen; null = alles
+  };
 
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
   function iso(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
   function fmtDay(s) { var p = s.split("-"); return p[2] + "." + p[1] + "."; }
   function euro(n) { return n == null ? "" : n.toFixed(2).replace(".", ",") + " €"; }
-  function save() {
-    try { localStorage.setItem("mittago.merkmal", state.merkmal || ""); localStorage.setItem("mittago.kantinen", JSON.stringify(state.kantinen)); } catch (e) {}
+  function parseRange(v) { if (!v) return null; var p = v.split("-").map(Number); return p.length === 2 && !isNaN(p[0]) && !isNaN(p[1]) ? p : null; }
+
+  // ---- Zustand: URL (Lesezeichen) vor Browser-Speicher ----------------------
+  (function readState() {
+    var p = new URLSearchParams(location.search);
+    var keys = ["art", "k", "q", "tag", "ohne", "z", "typ", "preis", "kcal", "gruppe"];
+    var hatUrl = keys.some(function (k) { return p.has(k); });
+    var saved = {};
+    if (!hatUrl) { try { saved = JSON.parse(localStorage.getItem("mittago.state") || "{}") || {}; } catch (e) { saved = {}; } }
+    var get = function (k) { return hatUrl ? p.getAll(k) : (saved[k] || []); };
+    state.merkmale = get("art").filter(function (v) { return LABEL.merkmale[v]; });
+    state.ohne = get("ohne").filter(function (v) { return LABEL.frei_von[v]; });
+    state.zutaten = get("z").filter(function (v) { return LABEL.zutaten[v]; });
+    state.typ = get("typ").filter(function (v) { return LABEL.gerichtstyp[v]; });
+    state.kantinen = get("k").map(function (id) { return KANTINE[id]; }).filter(Boolean);
+    var g = hatUrl ? p.get("gruppe") : saved.gruppe;
+    if (GRUPPEN[g]) state.gruppe = g;
+    state.preis = parseRange(hatUrl ? p.get("preis") : saved.preis);
+    state.kcal = parseRange(hatUrl ? p.get("kcal") : saved.kcal);
+    if (hatUrl) { state.q = (p.get("q") || "").trim(); state.urlDay = p.get("tag"); }
+  })();
+
+  function rangeStr(r) { return r ? r[0] + "-" + r[1] : null; }
+  function writeState() {
+    var p = new URLSearchParams();
+    if (state.q) p.set("q", state.q);
+    if (state.day === "alle") p.set("tag", "woche");
+    else if (state.day && state.day !== state.defaultDay) p.set("tag", state.day);
+    state.merkmale.forEach(function (v) { p.append("art", v); });
+    state.ohne.forEach(function (v) { p.append("ohne", v); });
+    state.zutaten.forEach(function (v) { p.append("z", v); });
+    state.typ.forEach(function (v) { p.append("typ", v); });
+    state.kantinen.forEach(function (n) { var id = kantineId(n); if (id) p.append("k", id); });
+    if (state.preis) p.set("preis", rangeStr(state.preis));
+    if (state.kcal) p.set("kcal", rangeStr(state.kcal));
+    if (state.gruppe !== "gast") p.set("gruppe", state.gruppe);
+    var qs = p.toString();
+    history.replaceState(null, "", location.pathname + (qs ? "?" + qs : ""));
+    try {
+      localStorage.setItem("mittago.state", JSON.stringify({
+        art: state.merkmale, ohne: state.ohne, z: state.zutaten, typ: state.typ,
+        k: state.kantinen.map(kantineId).filter(Boolean), gruppe: state.gruppe,
+        preis: rangeStr(state.preis), kcal: rangeStr(state.kcal)
+      }));
+    } catch (e) {}
   }
 
-  // Eine Anfrage an QSC mit allen aktiven Filtern
+  // ---- QSC-Anfrage -----------------------------------------------------------
+  function stufen(cfg, r) {
+    var out = [];
+    for (var v = r[0]; v <= r[1] + 1e-9; v = Math.round((v + cfg.step) * 100) / 100) out.push(cfg.key(v));
+    if (r[1] >= cfg.max) for (var w = cfg.max + cfg.step; w <= cfg.max * 3; w = Math.round((w + cfg.step) * 100) / 100) out.push(cfg.key(w)); // "max+" schließt Ausreißer ein
+    return out;
+  }
   function query(opts) {
     var p = ["q=" + encodeURIComponent(opts.q || "*"), "rows=" + (opts.rows == null ? 200 : opts.rows)];
-    if (opts.tag) p.push("f.tag=" + encodeURIComponent(opts.tag));
-    if (opts.merkmal) p.push("f.merkmale=" + encodeURIComponent(opts.merkmal));
-    (opts.kantinen || []).forEach(function (k) { p.push("f.kantine=" + encodeURIComponent(k)); });
+    var add = function (k, v) { p.push(k + "=" + encodeURIComponent(v)); };
+    if (opts.tag) add("f.tag", opts.tag);
+    (opts.merkmale || []).forEach(function (v) { add("f.merkmale.and", v); });
+    (opts.ohne || []).forEach(function (v) { add("f.frei_von.and", v); });
+    (opts.zutaten || []).forEach(function (v) { add("f.zutaten", v); });
+    (opts.typ || []).forEach(function (v) { add("f.gerichtstyp", v); });
+    (opts.kantinen || []).forEach(function (v) { add("f.kantine", v); });
+    if (opts.preis) stufen(PREIS, opts.preis).forEach(function (v) { add("f.preis_stufe", v); });
+    if (opts.kcal) stufen(KCAL, opts.kcal).forEach(function (v) { add("f.kcal_stufe", v); });
     return fetch(API + "?" + p.join("&")).then(function (r) {
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
@@ -259,52 +352,88 @@ footer a { color: inherit; }
       return { docs: (res.documents || []).map(function (d) { return d.document; }), total: res.total || 0, facets: facets };
     });
   }
-
+  function current() {
+    return { q: state.q, tag: state.day === "alle" ? null : state.day, merkmale: state.merkmale, ohne: state.ohne,
+      zutaten: state.zutaten, typ: state.typ, kantinen: state.kantinen, preis: state.preis, kcal: state.kcal };
+  }
   function count(facet, value) {
     for (var i = 0; i < (facet || []).length; i++) if (facet[i].value === value) return facet[i].count;
     return 0;
   }
 
+  // ---- Rendering der Filter --------------------------------------------------
   function renderDays() {
     var now = iso(new Date());
-    var all = '<button type="button" class="day" data-day="alle" aria-pressed="' + (state.day === "alle") + '"><b>Woche</b><small>alle Tage</small></button>';
     $("days").innerHTML = state.tage.map(function (s) {
       var d = new Date(s + "T12:00:00"), name = s === now ? "Heute" : TAGE[d.getDay()];
       return '<button type="button" class="day" data-day="' + s + '" aria-pressed="' + (s === state.day) + '"><b>' + name + '</b><small>' + fmtDay(s) + "</small></button>";
-    }).join("") + all;
+    }).join("") + '<button type="button" class="day" data-day="alle" aria-pressed="' + (state.day === "alle") + '"><b>Woche</b><small>alle Tage</small></button>';
   }
 
-  function renderFilters(facets) {
-    var m = facets.merkmale || [];
-    $("arten").innerHTML = '<span class="lbl">Art</span><button type="button" class="chip" data-merkmal="" aria-pressed="' + !state.merkmal + '">Alle</button>' +
-      MERKMALE.map(function (x) {
-        var n = count(m, x.id);
-        return '<button type="button" class="chip" data-merkmal="' + x.id + '" aria-pressed="' + (state.merkmal === x.id) + '"' + (n || state.merkmal === x.id ? "" : " disabled") + ">" +
-          x.label + ' <span class="cnt">' + n + "</span></button>";
-      }).join("");
-    var k = (facets.kantine || []).slice();
-    // ausgewählte Kantinen auch zeigen, wenn sie gerade 0 Treffer haben
-    state.kantinen.forEach(function (name) { if (!k.some(function (v) { return v.value === name; })) k.push({ value: name, count: 0 }); });
-    $("kantinen").innerHTML = '<span class="lbl">Kantinen</span>' + k.map(function (v) {
-      var on = state.kantinen.indexOf(v.value) >= 0;
-      return '<button type="button" class="kt" data-k="' + esc(v.value) + '" aria-pressed="' + on + '">' + esc(v.value) + ' <span class="cnt">' + v.count + "</span></button>";
-    }).join("") + (state.kantinen.length ? '<button type="button" class="chip reset" data-kreset="1">Alle Kantinen</button>' : "");
+  function chips(id, label, values, selected, facet, key, cls) {
+    var html = '<span class="lbl">' + label + "</span>" + values.map(function (v) {
+      var n = count(facet, v), on = selected.indexOf(v) >= 0;
+      return '<button type="button" class="' + (cls || "chip") + '" data-f="' + key + '" data-v="' + esc(v) + '" aria-pressed="' + on + '"' + (n || on ? "" : " disabled") + ">" +
+        esc(LABEL[key === "k" ? "x" : key] ? LABEL[key][v] || v : v) + ' <span class="cnt">' + n + "</span></button>";
+    }).join("");
+    $(id).innerHTML = html;
   }
 
+  function renderRange(id, cfg, title, sel, facet, note) {
+    var bins = [], maxN = 1;
+    for (var v = cfg.min; v <= cfg.max + 1e-9; v = Math.round((v + cfg.step) * 100) / 100) {
+      var n = count(facet, cfg.key(v));
+      if (v >= cfg.max) (facet || []).forEach(function (f) { if (parseFloat(f.value) > cfg.max) n += f.count; });
+      bins.push({ v: v, n: n }); if (n > maxN) maxN = n;
+    }
+    var lo = sel ? sel[0] : cfg.min, hi = sel ? sel[1] : cfg.max;
+    var nBins = bins.length - 1;
+    var iLo = Math.round((lo - cfg.min) / cfg.step), iHi = Math.round((hi - cfg.min) / cfg.step);
+    var label = sel ? cfg.fmt(lo) + " – " + (hi >= cfg.max ? cfg.fmt(cfg.max) + "+" : cfg.fmt(hi + cfg.step)) : "alle";
+    $(id).innerHTML =
+      '<div class="head"><span class="lbl">' + title + '</span><span class="val">' + label + "</span></div>" +
+      '<div class="hist" aria-hidden="true">' + bins.map(function (b, i) {
+        return '<span class="' + (i >= iLo && i <= iHi ? "in" : "") + '" style="height:' + Math.max(2, Math.round(b.n / maxN * 100)) + '%" title="' + cfg.fmt(b.v) + ": " + b.n + '"></span>';
+      }).join("") + "</div>" +
+      '<div class="dual"><div class="rail"></div><div class="fill" style="left:calc(9px + (100% - 18px) * ' + (iLo / nBins) + ');right:calc(9px + (100% - 18px) * ' + (1 - iHi / nBins) + ')"></div>' +
+      '<input type="range" min="0" max="' + nBins + '" step="1" value="' + iLo + '" data-r="' + id + '" data-end="lo" aria-label="' + title + ' von">' +
+      '<input type="range" min="0" max="' + nBins + '" step="1" value="' + iHi + '" data-r="' + id + '" data-end="hi" aria-label="' + title + ' bis"></div>' +
+      '<div class="scale"><span>' + cfg.fmt(cfg.min) + "</span>" + (note ? "<span>" + note + "</span>" : "") + "<span>" + cfg.fmt(cfg.max) + "+</span></div>";
+  }
+
+  function renderFilters(f) {
+    chips("arten", "Ernährung", MERKMAL_ORDER, state.merkmale, f.merkmale, "merkmale");
+    chips("ohne", "Frei von (laut Allergenangabe)", Object.keys(LABEL.frei_von), state.ohne, f.frei_von, "frei_von");
+    chips("zutaten", "Zutaten", (f.zutaten || []).map(function (v) { return v.value; }).concat(state.zutaten.filter(function (z) { return !count(f.zutaten, z); })), state.zutaten, f.zutaten, "zutaten");
+    chips("typ", "Gerichtstyp", Object.keys(LABEL.gerichtstyp).filter(function (t) { return t !== "offen"; }), state.typ, f.gerichtstyp, "gerichtstyp");
+    var ks = ORDER.map(function (id) { return KANTINE[id]; });
+    $("kantinen").innerHTML = '<span class="lbl">Kantinen</span>' + ks.map(function (name) {
+      var n = count(f.kantine, name), on = state.kantinen.indexOf(name) >= 0;
+      return '<button type="button" class="kt" data-f="kantine" data-v="' + esc(name) + '" aria-pressed="' + on + '"' + (n || on ? "" : " disabled") + ">" + esc(name) + ' <span class="cnt">' + n + "</span></button>";
+    }).join("");
+    renderRange("r-preis", PREIS, "Preis (Gast)", state.preis, f.preis_stufe);
+    renderRange("r-kcal", KCAL, "Kalorien", state.kcal, f.kcal_stufe, "teils geschätzt");
+    var n = state.ohne.length + state.zutaten.length + state.typ.length + state.kantinen.length + (state.preis ? 1 : 0) + (state.kcal ? 1 : 0);
+    $("nmore").hidden = !n; $("nmore").textContent = n;
+    Array.prototype.forEach.call(document.querySelectorAll("#gruppe button"), function (b) { b.setAttribute("aria-pressed", String(b.dataset.gruppe === state.gruppe)); });
+  }
+
+  // ---- Rendering der Gerichte ------------------------------------------------
   function highlight(text) {
     if (!state.q) return esc(text);
     var words = state.q.split(/\s+/).filter(function (w) { return w.length > 2; }).map(function (w) { return w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); });
     if (!words.length) return esc(text);
     return esc(text).replace(new RegExp("(" + words.join("|") + ")", "gi"), "<mark>$1</mark>");
   }
-
   function dishHtml(d) {
     var t = TAG[d.art] || TAG.unbekannt;
-    var kcal = d.kcal ? '<span class="sub">' + d.kcal + " kcal</span>" : "";
-    return '<div class="dish"><div class="name">' + highlight(d.gericht) + '</div><div class="price">' + euro(d.preis) +
-      '</div><div class="meta"><span class="tag ' + t[0] + '">' + t[1] + '</span><span class="sub">' + esc(d.kategorie) + " · " + esc(d.preis_text) + "</span>" + kcal + "</div></div>";
+    var preis = d[GRUPPEN[state.gruppe]]; if (preis == null) preis = d.preis;
+    var kcal = d.kcal ? '<span class="sub">' + (d.kcal_geschaetzt ? "ca. " : "") + d.kcal + " kcal</span>" : "";
+    var al = (d.allergene_liste || []).map(function (a) { return LABEL.allergene[a] || a; });
+    var allerg = al.length ? '<span class="allerg">enthält: ' + esc(al.join(", ")) + "</span>" : "";
+    return '<div class="dish"><div class="name">' + highlight(d.gericht) + '</div><div class="price">' + euro(preis) +
+      '</div><div class="meta"><span class="tag ' + t[0] + '">' + t[1] + '</span><span class="sub">' + esc(d.kategorie) + " · " + esc(d.preis_text) + "</span>" + kcal + allerg + "</div></div>";
   }
-
   function group(items) {
     var g = {}, meta = {}, out = "";
     items.forEach(function (d) { (g[d.kantine_id] = g[d.kantine_id] || []).push(d); meta[d.kantine_id] = d; });
@@ -316,8 +445,9 @@ footer a { color: inherit; }
     });
     return out;
   }
-
+  var last = null;
   function renderList(r) {
+    last = r;
     var html = "";
     if (state.day === "alle") {
       var byDay = {};
@@ -326,25 +456,19 @@ footer a { color: inherit; }
         var d = new Date(s + "T12:00:00");
         html += '<h3 class="day-title">' + TAGE[d.getDay()] + ", " + fmtDay(s) + "</h3>" + group(byDay[s]);
       });
-    } else {
-      html = group(r.docs);
-    }
-    if (!r.docs.length) {
-      html = '<div class="empty">' + (state.q ? "Nichts gefunden für „" + esc(state.q) + "“. Andere Schreibweise probieren oder Filter lockern." : "Für diese Auswahl gibt es kein Gericht.") + "</div>";
-    }
+    } else html = group(r.docs);
+    if (!r.docs.length) html = '<div class="empty">' + (state.q ? "Nichts gefunden für „" + esc(state.q) + "“. " : "Für diese Auswahl gibt es kein Gericht. ") + "Filter lockern oder zurücksetzen.</div>";
     $("status").className = "status";
-    $("status").textContent = state.q ? r.total + " Treffer für „" + state.q + "“" : "";
+    $("status").textContent = state.q ? r.total + " Treffer für „" + state.q + "“" : (r.total ? r.total + " Gerichte" : "");
     $("list").innerHTML = '<div style="display:grid;gap:14px">' + html + "</div>";
   }
 
   function load() {
     var my = ++state.seq;
-    writeUrl();
-    $("status").className = "status";
-    if (!$("list").innerHTML) $("status").textContent = "Lade …";
+    writeState();
     $("list").setAttribute("aria-busy", "true");
-    query({ q: state.q, tag: state.day === "alle" ? null : state.day, merkmal: state.merkmal, kantinen: state.kantinen }).then(function (r) {
-      if (my !== state.seq) return; // veraltete Antwort
+    query(current()).then(function (r) {
+      if (my !== state.seq) return;
       renderDays(); renderFilters(r.facets); renderList(r);
       $("list").removeAttribute("aria-busy");
     }).catch(function (e) {
@@ -354,7 +478,6 @@ footer a { color: inherit; }
     });
   }
 
-  // Start: verfügbare Tage aus der QSC-Facette "tag", dann heute (oder nächsten Tag mit Angebot) filtern
   function init() {
     query({ rows: 0 }).then(function (r) {
       state.tage = (r.facets.tag || []).map(function (v) { return v.value; }).sort();
@@ -363,10 +486,10 @@ footer a { color: inherit; }
       if (now.getHours() >= 14) { var t = new Date(now); t.setDate(t.getDate() + 1); ab = iso(t); }
       state.defaultDay = state.tage.filter(function (s) { return s >= ab; })[0] || state.tage[state.tage.length - 1];
       state.day = state.defaultDay;
-      // Tag aus dem Lesezeichen nur, wenn es ihn noch gibt (vergangene Tage -> heute)
       if (state.urlDay === "woche" || state.q) state.day = "alle";
       else if (state.urlDay && state.tage.indexOf(state.urlDay) >= 0) state.day = state.urlDay;
       if (state.q) { $("q").value = state.q; $("clear").hidden = false; }
+      if (state.ohne.length || state.zutaten.length || state.typ.length || state.kantinen.length || state.preis || state.kcal) $("more").open = true;
       load();
     }).catch(function (e) {
       $("status").textContent = "Speisepläne konnten nicht geladen werden (" + e.message + "). Seite neu laden oder später versuchen.";
@@ -374,30 +497,57 @@ footer a { color: inherit; }
     });
   }
 
+  // ---- Interaktion -----------------------------------------------------------
   var timer = null, lastDay = null;
   $("q").addEventListener("input", function () {
     var q = $("q").value.trim();
     $("clear").hidden = !q;
     clearTimeout(timer);
     timer = setTimeout(function () {
-      if (q && !state.q) { lastDay = state.day; state.day = "alle"; } // Suche über die ganze Woche
+      if (q && !state.q) { lastDay = state.day; state.day = "alle"; }
       if (!q && state.q && lastDay) { state.day = lastDay; lastDay = null; }
       state.q = q; load();
     }, 250);
   });
 
+  var LIST = { merkmale: "merkmale", frei_von: "ohne", zutaten: "zutaten", gerichtstyp: "typ", kantine: "kantinen" };
   document.addEventListener("click", function (ev) {
     var b = ev.target.closest("button");
     if (!b || b.disabled) return;
     if (b.dataset.day) { state.day = b.dataset.day; lastDay = null; load(); }
-    else if (b.dataset.merkmal !== undefined) { state.merkmal = b.dataset.merkmal || null; save(); load(); }
-    else if (b.dataset.k) {
-      var i = state.kantinen.indexOf(b.dataset.k);
-      if (i >= 0) state.kantinen.splice(i, 1); else state.kantinen.push(b.dataset.k);
-      save(); load();
+    else if (b.dataset.f && LIST[b.dataset.f]) {
+      var arr = state[LIST[b.dataset.f]], i = arr.indexOf(b.dataset.v);
+      if (i >= 0) arr.splice(i, 1); else arr.push(b.dataset.v);
+      load();
     }
-    else if (b.dataset.kreset) { state.kantinen = []; save(); load(); }
+    else if (b.dataset.gruppe) { state.gruppe = b.dataset.gruppe; writeState(); renderFilters(last ? last.facets : {}); if (last) renderList(last); }
+    else if (b.id === "resetall") { state.merkmale = []; state.ohne = []; state.zutaten = []; state.typ = []; state.kantinen = []; state.preis = null; state.kcal = null; load(); }
     else if (b.id === "clear") { $("q").value = ""; $("q").dispatchEvent(new Event("input")); $("q").focus(); }
+  });
+
+  // Slider: beim Ziehen nur Anzeige, beim Loslassen QSC fragen
+  function sliderValue(input) {
+    var id = input.dataset.r, cfg = id === "r-preis" ? PREIS : KCAL, key = id === "r-preis" ? "preis" : "kcal";
+    var box = input.parentNode, lo = box.querySelector('[data-end="lo"]'), hi = box.querySelector('[data-end="hi"]');
+    var a = +lo.value, z = +hi.value;
+    if (a > z) { if (input === lo) lo.value = a = z; else hi.value = z = a; }
+    var nBins = +lo.max;
+    var full = a === 0 && z === nBins;
+    return { key: key, cfg: cfg, val: full ? null : [Math.round((cfg.min + a * cfg.step) * 100) / 100, Math.round((cfg.min + z * cfg.step) * 100) / 100], a: a, z: z, n: nBins, box: box };
+  }
+  document.addEventListener("input", function (ev) {
+    if (!ev.target.dataset || !ev.target.dataset.r) return;
+    var s = sliderValue(ev.target);
+    s.box.querySelector(".fill").style.left = "calc(9px + (100% - 18px) * " + (s.a / s.n) + ")";
+    s.box.querySelector(".fill").style.right = "calc(9px + (100% - 18px) * " + (1 - s.z / s.n) + ")";
+    var head = s.box.parentNode.querySelector(".val");
+    head.textContent = s.val ? s.cfg.fmt(s.val[0]) + " – " + (s.val[1] >= s.cfg.max ? s.cfg.fmt(s.cfg.max) + "+" : s.cfg.fmt(s.val[1] + s.cfg.step)) : "alle";
+    Array.prototype.forEach.call(s.box.parentNode.querySelectorAll(".hist span"), function (sp, i) { sp.className = i >= s.a && i <= s.z ? "in" : ""; });
+  });
+  document.addEventListener("change", function (ev) {
+    if (!ev.target.dataset || !ev.target.dataset.r) return;
+    var s = sliderValue(ev.target);
+    state[s.key] = s.val; load();
   });
 
   init();
