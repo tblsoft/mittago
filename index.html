@@ -73,8 +73,6 @@ body {
   .layout { grid-template-columns: 300px minmax(0, 1fr); gap: 28px; align-items: start; }
   .side { position: sticky; top: max(16px, env(safe-area-inset-top, 0px)); max-height: calc(100vh - 32px); overflow-y: auto; padding-right: 4px; scrollbar-width: thin; }
   .side .row .lbl { min-width: 0; width: 100%; margin-bottom: 2px; }
-  details.more.fixed > summary { cursor: default; pointer-events: none; }
-  details.more.fixed > summary::after { display: none; }
 }
 
 header { display: grid; gap: 14px; }
@@ -196,6 +194,48 @@ details.more > summary:focus-visible { outline: 2px solid var(--accent); outline
 .dual .fill { position: absolute; top: 9px; height: 4px; background: var(--accent); border-radius: 2px; }
 .range .scale { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; padding: 0 2px; }
 .allerg { color: var(--muted); font-size: 0.78rem; }
+
+/* ---- Filter-Seitenleiste ---- */
+.side-head, .side-foot { display: none; }
+.side-body { display: grid; gap: 4px; }
+.fs-static { padding: 0 0 12px; display: grid; gap: 6px; }
+.fs-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.active { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 10px 0 12px; border-top: 1px solid var(--line); }
+.active .pill { font: inherit; font-size: 0.8rem; display: inline-flex; gap: 6px; align-items: center; border: 0; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--ink); border-radius: 999px; padding: 3px 6px 3px 10px; cursor: pointer; }
+.active .pill b { font-weight: 400; color: var(--muted); font-size: 1rem; line-height: 1; }
+.active .clear-all { font: inherit; font-size: 0.8rem; border: 0; background: none; color: var(--accent); text-decoration: underline; cursor: pointer; padding: 3px 4px; }
+details.fs { border-top: 1px solid var(--line); }
+details.fs > summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 12px 2px; font-weight: 600; font-size: 0.95rem; }
+details.fs > summary::-webkit-details-marker { display: none; }
+details.fs > summary::after { content: ""; width: 7px; height: 7px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); margin: 0 4px 4px 8px; transition: transform .15s; }
+details.fs[open] > summary::after { transform: rotate(-135deg); margin-bottom: -2px; }
+details.fs > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(--accent); color: var(--accent-ink); border-radius: 999px; font-size: 0.72rem; padding: 0 7px; font-weight: 600; }
+.fs-body { padding: 0 2px 14px; display: grid; gap: 2px; }
+.fs-hint { color: var(--muted); font-size: 0.78rem; margin: 0 0 6px; }
+.opt { display: flex; align-items: center; gap: 10px; padding: 5px 0; cursor: pointer; font-size: 0.92rem; }
+.opt input { width: 17px; height: 17px; margin: 0; accent-color: var(--accent); flex: none; cursor: pointer; }
+.opt .t { flex: 1; min-width: 0; }
+.opt .c { color: var(--muted); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.opt input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.more-btn { font: inherit; font-size: 0.85rem; background: none; border: 0; color: var(--accent); cursor: pointer; padding: 4px 0; justify-self: start; }
+.results-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.filter-btn { display: none; font: inherit; font-weight: 600; font-size: 0.92rem; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.icon-btn { font: inherit; font-size: 1.5rem; line-height: 1; border: 0; background: none; color: var(--muted); width: 36px; height: 36px; border-radius: 50%; cursor: pointer; }
+.show-btn { width: 100%; font: inherit; font-weight: 600; border: 0; background: var(--accent); color: var(--accent-ink); border-radius: 12px; padding: 12px; cursor: pointer; }
+
+/* Handy: Seitenleiste als Overlay */
+@media (max-width: 899px) {
+  .filter-btn { display: inline-flex; align-items: center; }
+  .side { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: none; grid-template-rows: auto 1fr auto; gap: 0;
+    padding: env(safe-area-inset-top, 0px) max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px)); }
+  .side.open { display: grid; }
+  .side-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .side-head h2 { margin: 0; font-family: var(--font-display); font-size: 1.3rem; }
+  .side-body { overflow-y: auto; padding: 14px 0; }
+  .side-foot { display: block; padding: 12px 0 max(12px, env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); }
+  body.noscroll { overflow: hidden; }
+}
 </style>
 </head>
 <body>
@@ -214,30 +254,25 @@ details.more > summary:focus-visible { outline: 2px solid var(--accent); outline
   </header>
 
   <div class="layout">
-    <aside class="side" aria-label="Filter">
-      <div class="toolbar">
-        <div class="seg" id="gruppe" role="group" aria-label="Preise anzeigen für">
-          <button type="button" data-gruppe="gast">Gast</button><button type="button" data-gruppe="student">Studierende</button><button type="button" data-gruppe="bedienstet">Bedienstete</button>
-        </div>
-      </div>
-      <div class="filters">
-        <div class="row" id="arten" role="group" aria-label="Ernährung"><span class="lbl">Ernährung</span></div>
-        <details class="more" id="more">
-          <summary><span>Weitere Filter<span class="badge" id="nmore" hidden></span></span></summary>
-          <div class="panel">
-            <div class="range" id="r-preis"></div>
-            <div class="range" id="r-kcal"></div>
-            <div class="row" id="ohne" role="group" aria-label="Frei von"><span class="lbl">Frei von (laut Allergenangabe)</span></div>
-            <div class="row" id="zutaten" role="group" aria-label="Zutaten"><span class="lbl">Zutaten</span></div>
-            <div class="row" id="typ" role="group" aria-label="Gerichtstyp"><span class="lbl">Gerichtstyp</span></div>
-            <div class="row" id="kantinen" role="group" aria-label="Kantinen"><span class="lbl">Kantinen</span></div>
-            <button type="button" class="reset-all" id="resetall">Alle Filter zurücksetzen</button>
+    <aside class="side" id="side" aria-label="Filter">
+      <div class="side-head"><h2>Filter</h2><button type="button" class="icon-btn" id="closeside" aria-label="Filter schließen">×</button></div>
+      <div class="side-body">
+        <div class="fs-static">
+          <div class="fs-title">Preise anzeigen für</div>
+          <div class="seg" id="gruppe" role="group" aria-label="Preise anzeigen für">
+            <button type="button" data-gruppe="gast">Gast</button><button type="button" data-gruppe="student">Studierende</button><button type="button" data-gruppe="bedienstet">Bedienstete</button>
           </div>
-        </details>
+        </div>
+        <div id="active" class="active" hidden></div>
+        <div id="facets"></div>
       </div>
+      <div class="side-foot"><button type="button" class="show-btn" id="showres">Gerichte anzeigen</button></div>
     </aside>
     <div class="results">
-      <div class="status" id="status" role="status">Speisepläne werden geladen …</div>
+      <div class="results-head">
+        <div class="status" id="status" role="status">Speisepläne werden geladen …</div>
+        <button type="button" class="filter-btn" id="openside">Filter<span class="badge" id="nfilter" hidden></span></button>
+      </div>
       <main id="list" aria-live="polite"></main>
     </div>
   </div>
@@ -387,52 +422,104 @@ details.more > summary:focus-visible { outline: 2px solid var(--accent); outline
     }).join("") + '<button type="button" class="day" data-day="alle" aria-pressed="' + (state.day === "alle") + '"><b>Woche</b><small>alle Tage</small></button>';
   }
 
-  function chips(id, label, values, selected, facet, key, cls) {
-    var html = '<span class="lbl">' + label + "</span>" + values.map(function (v) {
-      var n = count(facet, v), on = selected.indexOf(v) >= 0;
-      return '<button type="button" class="' + (cls || "chip") + '" data-f="' + key + '" data-v="' + esc(v) + '" aria-pressed="' + on + '"' + (n || on ? "" : " disabled") + ">" +
-        esc(LABEL[key === "k" ? "x" : key] ? LABEL[key][v] || v : v) + ' <span class="cnt">' + n + "</span></button>";
-    }).join("");
-    $(id).innerHTML = html;
+  // Abschnitte der Seitenleiste; offen/zu wird im Browser gemerkt
+  var OPEN = { merkmale: true, preis: true, kantine: true };
+  try { var o = JSON.parse(localStorage.getItem("mittago.open") || "null"); if (o) OPEN = o; } catch (e) {}
+  var SHOWALL = {};
+  var SECS = [
+    { key: "merkmale", title: "Ernährung", list: "merkmale" },
+    { key: "preis", title: "Preis", range: true },
+    { key: "kantine", title: "Kantinen", list: "kantinen" },
+    { key: "zutaten", title: "Zutaten", list: "zutaten", top: 6 },
+    { key: "frei_von", title: "Frei von", list: "ohne", hint: "Nur Kantinen mit Allergenangabe." },
+    { key: "kcal", title: "Kalorien", range: true, hint: "Teils geschätzt." },
+    { key: "gerichtstyp", title: "Gerichtstyp", list: "typ" }
+  ];
+  function labelOf(key, v) { return key === "kantine" ? v : (LABEL[key] && LABEL[key][v]) || v; }
+
+  function optionsFor(sec, f) {
+    var sel = state[sec.list], vals;
+    if (sec.key === "merkmale") vals = MERKMAL_ORDER;
+    else if (sec.key === "kantine") vals = ORDER.map(function (id) { return KANTINE[id]; });
+    else if (sec.key === "frei_von") vals = Object.keys(LABEL.frei_von);
+    else if (sec.key === "gerichtstyp") vals = Object.keys(LABEL.gerichtstyp).filter(function (t) { return t !== "offen"; });
+    else vals = (f[sec.key] || []).map(function (v) { return v.value; });
+    // nur Optionen mit Treffern oder bereits gewählte zeigen; Zutaten nach Häufigkeit
+    var opts = vals.map(function (v) { return { v: v, n: count(f[sec.key], v), on: sel.indexOf(v) >= 0 }; })
+      .filter(function (o) { return o.n > 0 || o.on; });
+    sel.forEach(function (v) { if (!opts.some(function (o) { return o.v === v; })) opts.push({ v: v, n: 0, on: true }); });
+    if (sec.key === "zutaten") opts.sort(function (x, y) { return y.n - x.n; });
+    return opts;
   }
 
-  function renderRange(id, cfg, title, sel, facet, note) {
+  function rangeHtml(cfg, title, sel, facet) {
     var bins = [], maxN = 1;
     for (var v = cfg.min; v <= cfg.max + 1e-9; v = Math.round((v + cfg.step) * 100) / 100) {
       var n = count(facet, cfg.key(v));
-      if (v >= cfg.max) (facet || []).forEach(function (f) { if (parseFloat(f.value) > cfg.max) n += f.count; });
+      if (v >= cfg.max) (facet || []).forEach(function (x) { if (parseFloat(x.value) > cfg.max) n += x.count; });
       bins.push({ v: v, n: n }); if (n > maxN) maxN = n;
     }
-    var lo = sel ? sel[0] : cfg.min, hi = sel ? sel[1] : cfg.max;
-    var nBins = bins.length - 1;
+    var lo = sel ? sel[0] : cfg.min, hi = sel ? sel[1] : cfg.max, nBins = bins.length - 1;
     var iLo = Math.round((lo - cfg.min) / cfg.step), iHi = Math.round((hi - cfg.min) / cfg.step);
     var label = sel ? cfg.fmt(lo) + " – " + (hi >= cfg.max ? cfg.fmt(cfg.max) + "+" : cfg.fmt(hi + cfg.step)) : "alle";
-    $(id).innerHTML =
-      '<div class="head"><span class="lbl">' + title + '</span><span class="val">' + label + "</span></div>" +
+    var id = cfg === PREIS ? "r-preis" : "r-kcal";
+    return '<div class="range" id="' + id + '"><div class="head"><span class="fs-hint">' + (cfg === PREIS ? "Gästepreis" : "pro Portion") + '</span><span class="val">' + label + "</span></div>" +
       '<div class="hist" aria-hidden="true">' + bins.map(function (b, i) {
         return '<span class="' + (i >= iLo && i <= iHi ? "in" : "") + '" style="height:' + Math.max(2, Math.round(b.n / maxN * 100)) + '%" title="' + cfg.fmt(b.v) + ": " + b.n + '"></span>';
       }).join("") + "</div>" +
       '<div class="dual"><div class="rail"></div><div class="fill" style="left:calc(9px + (100% - 18px) * ' + (iLo / nBins) + ');right:calc(9px + (100% - 18px) * ' + (1 - iHi / nBins) + ')"></div>' +
       '<input type="range" min="0" max="' + nBins + '" step="1" value="' + iLo + '" data-r="' + id + '" data-end="lo" aria-label="' + title + ' von">' +
       '<input type="range" min="0" max="' + nBins + '" step="1" value="' + iHi + '" data-r="' + id + '" data-end="hi" aria-label="' + title + ' bis"></div>' +
-      '<div class="scale"><span>' + cfg.fmt(cfg.min) + "</span>" + (note ? "<span>" + note + "</span>" : "") + "<span>" + cfg.fmt(cfg.max) + "+</span></div>";
+      '<div class="scale"><span>' + cfg.fmt(cfg.min) + "</span><span>" + cfg.fmt(cfg.max) + "+</span></div></div>";
+  }
+
+  function activeCount(sec) {
+    if (sec.range) return state[sec.key] ? 1 : 0;
+    return state[sec.list].length;
   }
 
   function renderFilters(f) {
-    chips("arten", "Ernährung", MERKMAL_ORDER, state.merkmale, f.merkmale, "merkmale");
-    chips("ohne", "Frei von (laut Allergenangabe)", Object.keys(LABEL.frei_von), state.ohne, f.frei_von, "frei_von");
-    chips("zutaten", "Zutaten", (f.zutaten || []).map(function (v) { return v.value; }).concat(state.zutaten.filter(function (z) { return !count(f.zutaten, z); })), state.zutaten, f.zutaten, "zutaten");
-    chips("typ", "Gerichtstyp", Object.keys(LABEL.gerichtstyp).filter(function (t) { return t !== "offen"; }), state.typ, f.gerichtstyp, "gerichtstyp");
-    var ks = ORDER.map(function (id) { return KANTINE[id]; });
-    $("kantinen").innerHTML = '<span class="lbl">Kantinen</span>' + ks.map(function (name) {
-      var n = count(f.kantine, name), on = state.kantinen.indexOf(name) >= 0;
-      return '<button type="button" class="kt" data-f="kantine" data-v="' + esc(name) + '" aria-pressed="' + on + '"' + (n || on ? "" : " disabled") + ">" + esc(name) + ' <span class="cnt">' + n + "</span></button>";
+    var focus = document.activeElement && document.activeElement.dataset ? { f: document.activeElement.dataset.f, v: document.activeElement.dataset.v } : null;
+    var html = SECS.map(function (sec) {
+      var body, n = activeCount(sec);
+      if (sec.range) {
+        body = rangeHtml(sec.key === "preis" ? PREIS : KCAL, sec.title, state[sec.key], f[sec.key === "preis" ? "preis_stufe" : "kcal_stufe"]);
+      } else {
+        var opts = optionsFor(sec, f);
+        if (!opts.length) return "";
+        var limit = sec.top && !SHOWALL[sec.key] ? sec.top : 999;
+        var shown = opts.filter(function (o, i) { return i < limit || o.on; });
+        body = shown.map(function (o) {
+          return '<label class="opt"><input type="checkbox" data-f="' + sec.key + '" data-v="' + esc(o.v) + '"' + (o.on ? " checked" : "") + '><span class="t">' + esc(labelOf(sec.key, o.v)) + '</span><span class="c">' + o.n + "</span></label>";
+        }).join("");
+        if (opts.length > shown.length) body += '<button type="button" class="more-btn" data-showall="' + sec.key + '">' + (opts.length - shown.length) + " weitere anzeigen</button>";
+        else if (sec.top && SHOWALL[sec.key]) body += '<button type="button" class="more-btn" data-showless="' + sec.key + '">weniger anzeigen</button>';
+      }
+      return '<details class="fs" data-sec="' + sec.key + '"' + (OPEN[sec.key] || n ? " open" : "") + '><summary>' + sec.title +
+        (n ? '<span class="n">' + n + "</span>" : "") + '</summary><div class="fs-body">' + (sec.hint ? '<p class="fs-hint">' + sec.hint + "</p>" : "") + body + "</div></details>";
     }).join("");
-    renderRange("r-preis", PREIS, "Preis (Gast)", state.preis, f.preis_stufe);
-    renderRange("r-kcal", KCAL, "Kalorien", state.kcal, f.kcal_stufe, "teils geschätzt");
-    var n = state.ohne.length + state.zutaten.length + state.typ.length + state.kantinen.length + (state.preis ? 1 : 0) + (state.kcal ? 1 : 0);
-    $("nmore").hidden = !n; $("nmore").textContent = n;
+    $("facets").innerHTML = html;
+    renderActive();
     Array.prototype.forEach.call(document.querySelectorAll("#gruppe button"), function (b) { b.setAttribute("aria-pressed", String(b.dataset.gruppe === state.gruppe)); });
+    if (focus && focus.f) { var el = document.querySelector('#facets input[data-f="' + focus.f + '"][data-v="' + (window.CSS && CSS.escape ? CSS.escape(focus.v) : focus.v) + '"]'); if (el) el.focus(); }
+  }
+
+  function renderActive() {
+    var pills = [];
+    SECS.forEach(function (sec) {
+      if (sec.range) {
+        var r = state[sec.key]; if (!r) return;
+        var cfg = sec.key === "preis" ? PREIS : KCAL;
+        pills.push({ f: sec.key, v: "", t: sec.title + ": " + cfg.fmt(r[0]) + " – " + (r[1] >= cfg.max ? cfg.fmt(cfg.max) + "+" : cfg.fmt(r[1] + cfg.step)) });
+      } else state[sec.list].forEach(function (v) { pills.push({ f: sec.key, v: v, t: (sec.key === "frei_von" ? "ohne " : "") + labelOf(sec.key, v) }); });
+    });
+    var box = $("active");
+    box.hidden = !pills.length;
+    box.innerHTML = pills.map(function (p) {
+      return '<button type="button" class="pill" data-rm="' + p.f + '" data-v="' + esc(p.v) + '" aria-label="Filter entfernen: ' + esc(p.t) + '">' + esc(p.t) + " <b>×</b></button>";
+    }).join("") + (pills.length > 1 ? '<button type="button" class="clear-all" id="clearall">Alle löschen</button>' : "");
+    var n = pills.length;
+    $("nfilter").hidden = !n; $("nfilter").textContent = n;
   }
 
   // ---- Rendering der Gerichte ------------------------------------------------
@@ -477,6 +564,7 @@ details.more > summary:focus-visible { outline: 2px solid var(--accent); outline
     if (!r.docs.length) html = '<div class="empty">' + (state.q ? "Nichts gefunden für „" + esc(state.q) + "“. " : "Für diese Auswahl gibt es kein Gericht. ") + "Filter lockern oder zurücksetzen.</div>";
     $("status").className = "status";
     $("status").textContent = state.q ? r.total + " Treffer für „" + state.q + "“" : (r.total ? r.total + " Gerichte" : "");
+    $("showres").textContent = r.total ? r.total + " Gerichte anzeigen" : "Keine Gerichte – Filter lockern";
     $("list").innerHTML = '<div style="display:grid;gap:14px">' + html + "</div>";
   }
 
@@ -506,7 +594,6 @@ details.more > summary:focus-visible { outline: 2px solid var(--accent); outline
       if (state.urlDay === "woche" || state.q) state.day = "alle";
       else if (state.urlDay && state.tage.indexOf(state.urlDay) >= 0) state.day = state.urlDay;
       if (state.q) { $("q").value = state.q; $("clear").hidden = false; }
-      if (state.ohne.length || state.zutaten.length || state.typ.length || state.kantinen.length || state.preis || state.kcal) $("more").open = true;
       load();
     }).catch(function (e) {
       $("status").textContent = "Speisepläne konnten nicht geladen werden (" + e.message + "). Seite neu laden oder später versuchen.";
@@ -528,17 +615,40 @@ details.more > summary:focus-visible { outline: 2px solid var(--accent); outline
   });
 
   var LIST = { merkmale: "merkmale", frei_von: "ohne", zutaten: "zutaten", gerichtstyp: "typ", kantine: "kantinen" };
+  function toggle(f, v) {
+    var arr = state[LIST[f]], i = arr.indexOf(v);
+    if (i >= 0) arr.splice(i, 1); else arr.push(v);
+  }
+  // Checkboxen in der Seitenleiste
+  document.addEventListener("change", function (ev) {
+    var t = ev.target;
+    if (t.type === "checkbox" && t.dataset.f && LIST[t.dataset.f]) { toggle(t.dataset.f, t.dataset.v); load(); }
+  });
+  // Offen/zu der Abschnitte merken
+  document.addEventListener("toggle", function (ev) {
+    var d = ev.target;
+    if (d.classList && d.classList.contains("fs")) {
+      OPEN[d.dataset.sec] = d.open;
+      try { localStorage.setItem("mittago.open", JSON.stringify(OPEN)); } catch (e) {}
+    }
+  }, true);
+  function openSide(on) { $("side").classList.toggle("open", on); document.body.classList.toggle("noscroll", on); if (on) $("closeside").focus(); else $("openside").focus(); }
+  document.addEventListener("keydown", function (ev) { if (ev.key === "Escape" && $("side").classList.contains("open")) openSide(false); });
+
   document.addEventListener("click", function (ev) {
     var b = ev.target.closest("button");
     if (!b || b.disabled) return;
     if (b.dataset.day) { state.day = b.dataset.day; lastDay = null; load(); }
-    else if (b.dataset.f && LIST[b.dataset.f]) {
-      var arr = state[LIST[b.dataset.f]], i = arr.indexOf(b.dataset.v);
-      if (i >= 0) arr.splice(i, 1); else arr.push(b.dataset.v);
+    else if (b.dataset.rm) {
+      if (b.dataset.rm === "preis" || b.dataset.rm === "kcal") state[b.dataset.rm] = null; else toggle(b.dataset.rm, b.dataset.v);
       load();
     }
+    else if (b.id === "clearall") { state.merkmale = []; state.ohne = []; state.zutaten = []; state.typ = []; state.kantinen = []; state.preis = null; state.kcal = null; load(); }
+    else if (b.dataset.showall) { SHOWALL[b.dataset.showall] = true; renderFilters(last ? last.facets : {}); }
+    else if (b.dataset.showless) { SHOWALL[b.dataset.showless] = false; renderFilters(last ? last.facets : {}); }
     else if (b.dataset.gruppe) { state.gruppe = b.dataset.gruppe; writeState(); renderFilters(last ? last.facets : {}); if (last) renderList(last); }
-    else if (b.id === "resetall") { state.merkmale = []; state.ohne = []; state.zutaten = []; state.typ = []; state.kantinen = []; state.preis = null; state.kcal = null; load(); }
+    else if (b.id === "openside") openSide(true);
+    else if (b.id === "closeside" || b.id === "showres") openSide(false);
     else if (b.id === "clear") { $("q").value = ""; $("q").dispatchEvent(new Event("input")); $("q").focus(); }
   });
 
@@ -566,13 +676,6 @@ details.more > summary:focus-visible { outline: 2px solid var(--accent); outline
     var s = sliderValue(ev.target);
     state[s.key] = s.val; load();
   });
-
-  // Breite Bildschirme: Filterpanel links, immer offen
-  var wide = window.matchMedia("(min-width: 900px)");
-  function applyWide() { var d = $("more"); d.classList.toggle("fixed", wide.matches); if (wide.matches) d.open = true; }
-  applyWide();
-  if (wide.addEventListener) wide.addEventListener("change", applyWide);
-  $("more").addEventListener("toggle", function () { if (wide.matches && !this.open) this.open = true; });
 
   init();
 })();
