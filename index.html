@@ -65,6 +65,17 @@ body {
   padding-block: max(20px, env(safe-area-inset-top, 0px)) 48px;
 }
 .wrap { max-width: 760px; margin: 0 auto; display: grid; gap: 22px; }
+.layout { display: grid; gap: 22px; }
+.side { display: grid; gap: 14px; align-content: start; min-width: 0; }
+.results { display: grid; gap: 10px; align-content: start; min-width: 0; }
+@media (min-width: 900px) {
+  .wrap { max-width: 1180px; }
+  .layout { grid-template-columns: 300px minmax(0, 1fr); gap: 28px; align-items: start; }
+  .side { position: sticky; top: max(16px, env(safe-area-inset-top, 0px)); max-height: calc(100vh - 32px); overflow-y: auto; padding-right: 4px; scrollbar-width: thin; }
+  .side .row .lbl { min-width: 0; width: 100%; margin-bottom: 2px; }
+  details.more.fixed > summary { cursor: default; pointer-events: none; }
+  details.more.fixed > summary::after { display: none; }
+}
 
 header { display: grid; gap: 14px; }
 .brand { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -200,30 +211,36 @@ details.more > summary:focus-visible { outline: 2px solid var(--accent); outline
       <button class="clear" id="clear" type="button" aria-label="Suche leeren" hidden>×</button>
     </div>
     <nav class="days" id="days" aria-label="Tag wählen"></nav>
-    <div class="toolbar">
-      <div class="seg" id="gruppe" role="group" aria-label="Preise anzeigen für">
-        <button type="button" data-gruppe="gast">Gast</button><button type="button" data-gruppe="student">Studierende</button><button type="button" data-gruppe="bedienstet">Bedienstete</button>
-      </div>
-    </div>
-    <div class="filters">
-      <div class="row" id="arten" role="group" aria-label="Ernährung"><span class="lbl">Ernährung</span></div>
-      <details class="more" id="more">
-        <summary><span>Weitere Filter<span class="badge" id="nmore" hidden></span></span></summary>
-        <div class="panel">
-          <div class="range" id="r-preis"></div>
-          <div class="range" id="r-kcal"></div>
-          <div class="row" id="ohne" role="group" aria-label="Frei von"><span class="lbl">Frei von (laut Allergenangabe)</span></div>
-          <div class="row" id="zutaten" role="group" aria-label="Zutaten"><span class="lbl">Zutaten</span></div>
-          <div class="row" id="typ" role="group" aria-label="Gerichtstyp"><span class="lbl">Gerichtstyp</span></div>
-          <div class="row" id="kantinen" role="group" aria-label="Kantinen"><span class="lbl">Kantinen</span></div>
-          <button type="button" class="reset-all" id="resetall">Alle Filter zurücksetzen</button>
-        </div>
-      </details>
-    </div>
   </header>
 
-  <div class="status" id="status" role="status">Speisepläne werden geladen …</div>
-  <main id="list" aria-live="polite"></main>
+  <div class="layout">
+    <aside class="side" aria-label="Filter">
+      <div class="toolbar">
+        <div class="seg" id="gruppe" role="group" aria-label="Preise anzeigen für">
+          <button type="button" data-gruppe="gast">Gast</button><button type="button" data-gruppe="student">Studierende</button><button type="button" data-gruppe="bedienstet">Bedienstete</button>
+        </div>
+      </div>
+      <div class="filters">
+        <div class="row" id="arten" role="group" aria-label="Ernährung"><span class="lbl">Ernährung</span></div>
+        <details class="more" id="more">
+          <summary><span>Weitere Filter<span class="badge" id="nmore" hidden></span></span></summary>
+          <div class="panel">
+            <div class="range" id="r-preis"></div>
+            <div class="range" id="r-kcal"></div>
+            <div class="row" id="ohne" role="group" aria-label="Frei von"><span class="lbl">Frei von (laut Allergenangabe)</span></div>
+            <div class="row" id="zutaten" role="group" aria-label="Zutaten"><span class="lbl">Zutaten</span></div>
+            <div class="row" id="typ" role="group" aria-label="Gerichtstyp"><span class="lbl">Gerichtstyp</span></div>
+            <div class="row" id="kantinen" role="group" aria-label="Kantinen"><span class="lbl">Kantinen</span></div>
+            <button type="button" class="reset-all" id="resetall">Alle Filter zurücksetzen</button>
+          </div>
+        </details>
+      </div>
+    </aside>
+    <div class="results">
+      <div class="status" id="status" role="status">Speisepläne werden geladen …</div>
+      <main id="list" aria-live="polite"></main>
+    </div>
+  </div>
 
   <footer>
     <div>Daten aus den Speiseplänen der Kantinen. Angaben ohne Gewähr. Der Preisfilter nutzt den Gästepreis; angezeigt wird der Preis der gewählten Gruppe.</div>
@@ -549,6 +566,13 @@ details.more > summary:focus-visible { outline: 2px solid var(--accent); outline
     var s = sliderValue(ev.target);
     state[s.key] = s.val; load();
   });
+
+  // Breite Bildschirme: Filterpanel links, immer offen
+  var wide = window.matchMedia("(min-width: 900px)");
+  function applyWide() { var d = $("more"); d.classList.toggle("fixed", wide.matches); if (wide.matches) d.open = true; }
+  applyWide();
+  if (wide.addEventListener) wide.addEventListener("change", applyWide);
+  $("more").addEventListener("toggle", function () { if (wide.matches && !this.open) this.open = true; });
 
   init();
 })();
