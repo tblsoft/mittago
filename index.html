@@ -246,6 +246,16 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
 .fs-hint.err { color: var(--pork); }
 .where { display: block; color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
 .where b { color: var(--accent); font-weight: 600; }
+
+.combo { position: relative; }
+.combo .sel { padding-right: 34px; }
+.combo-x { position: absolute; right: 4px; top: 4px; width: 30px; height: 30px; border: 0; background: none; color: var(--muted); font-size: 1.2rem; border-radius: 50%; cursor: pointer; }
+.combo-x:hover { background: var(--line); }
+.combo-list { position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% - 6px); margin: 0; padding: 4px; list-style: none; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px color-mix(in srgb, var(--ink) 14%, transparent); max-height: 280px; overflow-y: auto; }
+.combo-list li { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 7px 9px; border-radius: 7px; cursor: pointer; font-size: 0.92rem; }
+.combo-list li small { color: var(--muted); font-size: 0.75rem; white-space: nowrap; }
+.combo-list li[aria-selected="true"], .combo-list li:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.combo-empty { color: var(--muted); cursor: default !important; }
 </style>
 </head>
 <body>
@@ -327,7 +337,7 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
   var KCAL = { field: "kcal_stufe", step: 100, min: 0, max: 1200, fmt: function (v) { return v + " kcal"; }, key: function (v) { return String(v); } };
 
   // Orte für die Umkreissuche: [id, Name, Gruppe, lat, lon]. Quasiris steht immer oben.
-  var ORTE = [["quasiris", "Quasiris Office", "Favorit", null, null]].concat([["anger", "Anger", "Plätze", 50.97646, 11.03401], ["bruehler-garten", "Brühler Garten", "Plätze", 50.97363, 11.01986], ["domplatz", "Domplatz", "Plätze", 50.97755, 11.02282], ["fischmarkt-rathaus", "Fischmarkt / Rathaus", "Plätze", 50.97782, 11.02881], ["gothaer-platz", "Gothaer Platz", "Plätze", 50.97135, 11.01139], ["hauptbahnhof", "Hauptbahnhof", "Plätze", 50.97277, 11.03789], ["hirschgarten-staatskanzlei", "Hirschgarten / Staatskanzlei", "Plätze", 50.97357, 11.02882], ["juri-gagarin-ring-theater", "Juri-Gagarin-Ring / Theater", "Plätze", 50.97455, 11.01792], ["kraemerbruecke", "Krämerbrücke", "Plätze", 50.97875, 11.03094], ["leipziger-platz", "Leipziger Platz", "Plätze", 50.98135, 11.04178], ["nordstrand", "Nordstrand", "Plätze", 50.99855, 11.05187], ["petersberg", "Petersberg", "Plätze", 50.97881, 11.01862], ["stadtpark", "Stadtpark", "Plätze", 50.97012, 11.03843], ["wenigemarkt", "Wenigemarkt", "Plätze", 50.97863, 11.032], ["agentur-fuer-arbeit", "Agentur für Arbeit", "Institutionen", 50.95956, 11.04451], ["bundesarbeitsgericht", "Bundesarbeitsgericht", "Institutionen", 50.97748, 11.01457], ["fh-leipziger-strasse", "FH Leipziger Straße", "Institutionen", 50.99156, 11.05475], ["fh-schlueterstrasse", "FH Schlüterstraße", "Institutionen", 50.9855, 11.02445], ["fachhochschule-altonaer-str", "Fachhochschule (Altonaer Str.)", "Institutionen", 50.98502, 11.04276], ["flughafen-erfurt-weimar", "Flughafen Erfurt-Weimar", "Institutionen", 50.97927, 10.95865], ["hauptfriedhof", "Hauptfriedhof", "Institutionen", 50.97294, 10.99332], ["helios-klinikum", "Helios Klinikum", "Institutionen", 50.99268, 11.01345], ["ihk-erfurt", "IHK Erfurt", "Institutionen", 50.96339, 11.03296], ["justizzentrum-arbeitsgericht", "Justizzentrum / Arbeitsgericht", "Institutionen", 50.97561, 11.01376], ["mdr-landesfunkhaus-kika", "MDR Landesfunkhaus / KiKA", "Institutionen", 50.96226, 10.99576], ["messe-erfurt", "Messe Erfurt", "Institutionen", 50.95932, 10.98967], ["sparkasse-hauptverwaltung", "Sparkasse Hauptverwaltung", "Institutionen", 50.97139, 11.01698], ["stadtwerke-erfurt", "Stadtwerke Erfurt", "Institutionen", 50.98981, 11.02787], ["steigerwaldstadion", "Steigerwaldstadion", "Institutionen", 50.96016, 11.03728], ["thueringenpark", "Thüringenpark", "Institutionen", 51.00927, 10.99434], ["thueringer-landtag", "Thüringer Landtag", "Institutionen", 50.96398, 11.03442], ["thueringer-zoopark", "Thüringer Zoopark", "Institutionen", 51.02324, 11.02359], ["universitaet-erfurt", "Universität Erfurt", "Institutionen", 50.98921, 11.00902], ["egapark", "egapark", "Institutionen", 50.96477, 10.99765], ["andreasvorstadt", "Andreasvorstadt", "Stadtteile", 50.98813, 11.01206], ["bruehlervorstadt", "Brühlervorstadt", "Stadtteile", 50.97161, 10.99822], ["daberstedt", "Daberstedt", "Stadtteile", 50.96683, 11.05176], ["herrenberg", "Herrenberg", "Stadtteile", 50.95779, 11.06652], ["hochheim", "Hochheim", "Stadtteile", 50.9566, 11.00048], ["ilversgehofen", "Ilversgehofen", "Stadtteile", 50.99885, 11.03065], ["johannesvorstadt", "Johannesvorstadt", "Stadtteile", 50.99102, 11.04317], ["kraempfervorstadt", "Krämpfervorstadt", "Stadtteile", 50.981, 11.04617], ["loebervorstadt", "Löbervorstadt", "Stadtteile", 50.96425, 11.02666], ["marbach", "Marbach", "Stadtteile", 50.99679, 10.98758], ["melchendorf", "Melchendorf", "Stadtteile", 50.95013, 11.07053], ["moskauer-platz", "Moskauer Platz", "Stadtteile", 51.0117, 10.99915], ["rieth", "Rieth", "Stadtteile", 51.0041, 11.01491], ["roter-berg", "Roter Berg", "Stadtteile", 51.01798, 11.02121], ["wiesenhuegel", "Wiesenhügel", "Stadtteile", 50.95148, 11.06232]]);
+  var ORTE = [["quasiris", "Quasiris Office", "Rudolfstr. 55", 50.9720, 11.01171]].concat([["anger", "Anger", "Plätze", 50.97646, 11.03401], ["bruehler-garten", "Brühler Garten", "Plätze", 50.97363, 11.01986], ["domplatz", "Domplatz", "Plätze", 50.97755, 11.02282], ["fischmarkt-rathaus", "Fischmarkt / Rathaus", "Plätze", 50.97782, 11.02881], ["gothaer-platz", "Gothaer Platz", "Plätze", 50.97135, 11.01139], ["hauptbahnhof", "Hauptbahnhof", "Plätze", 50.97277, 11.03789], ["hirschgarten-staatskanzlei", "Hirschgarten / Staatskanzlei", "Plätze", 50.97357, 11.02882], ["juri-gagarin-ring-theater", "Juri-Gagarin-Ring / Theater", "Plätze", 50.97455, 11.01792], ["kraemerbruecke", "Krämerbrücke", "Plätze", 50.97875, 11.03094], ["leipziger-platz", "Leipziger Platz", "Plätze", 50.98135, 11.04178], ["nordstrand", "Nordstrand", "Plätze", 50.99855, 11.05187], ["petersberg", "Petersberg", "Plätze", 50.97881, 11.01862], ["stadtpark", "Stadtpark", "Plätze", 50.97012, 11.03843], ["wenigemarkt", "Wenigemarkt", "Plätze", 50.97863, 11.032], ["agentur-fuer-arbeit", "Agentur für Arbeit", "Institutionen", 50.95956, 11.04451], ["bundesarbeitsgericht", "Bundesarbeitsgericht", "Institutionen", 50.97748, 11.01457], ["fh-leipziger-strasse", "FH Leipziger Straße", "Institutionen", 50.99156, 11.05475], ["fh-schlueterstrasse", "FH Schlüterstraße", "Institutionen", 50.9855, 11.02445], ["fachhochschule-altonaer-str", "Fachhochschule (Altonaer Str.)", "Institutionen", 50.98502, 11.04276], ["flughafen-erfurt-weimar", "Flughafen Erfurt-Weimar", "Institutionen", 50.97927, 10.95865], ["hauptfriedhof", "Hauptfriedhof", "Institutionen", 50.97294, 10.99332], ["helios-klinikum", "Helios Klinikum", "Institutionen", 50.99268, 11.01345], ["ihk-erfurt", "IHK Erfurt", "Institutionen", 50.96339, 11.03296], ["justizzentrum-arbeitsgericht", "Justizzentrum / Arbeitsgericht", "Institutionen", 50.97561, 11.01376], ["mdr-landesfunkhaus-kika", "MDR Landesfunkhaus / KiKA", "Institutionen", 50.96226, 10.99576], ["messe-erfurt", "Messe Erfurt", "Institutionen", 50.95932, 10.98967], ["sparkasse-hauptverwaltung", "Sparkasse Hauptverwaltung", "Institutionen", 50.97139, 11.01698], ["stadtwerke-erfurt", "Stadtwerke Erfurt", "Institutionen", 50.98981, 11.02787], ["steigerwaldstadion", "Steigerwaldstadion", "Institutionen", 50.96016, 11.03728], ["thueringenpark", "Thüringenpark", "Institutionen", 51.00927, 10.99434], ["thueringer-landtag", "Thüringer Landtag", "Institutionen", 50.96398, 11.03442], ["thueringer-zoopark", "Thüringer Zoopark", "Institutionen", 51.02324, 11.02359], ["universitaet-erfurt", "Universität Erfurt", "Institutionen", 50.98921, 11.00902], ["egapark", "egapark", "Institutionen", 50.96477, 10.99765], ["andreasvorstadt", "Andreasvorstadt", "Stadtteile", 50.98813, 11.01206], ["bruehlervorstadt", "Brühlervorstadt", "Stadtteile", 50.97161, 10.99822], ["daberstedt", "Daberstedt", "Stadtteile", 50.96683, 11.05176], ["herrenberg", "Herrenberg", "Stadtteile", 50.95779, 11.06652], ["hochheim", "Hochheim", "Stadtteile", 50.9566, 11.00048], ["ilversgehofen", "Ilversgehofen", "Stadtteile", 50.99885, 11.03065], ["johannesvorstadt", "Johannesvorstadt", "Stadtteile", 50.99102, 11.04317], ["kraempfervorstadt", "Krämpfervorstadt", "Stadtteile", 50.981, 11.04617], ["loebervorstadt", "Löbervorstadt", "Stadtteile", 50.96425, 11.02666], ["marbach", "Marbach", "Stadtteile", 50.99679, 10.98758], ["melchendorf", "Melchendorf", "Stadtteile", 50.95013, 11.07053], ["moskauer-platz", "Moskauer Platz", "Stadtteile", 51.0117, 10.99915], ["rieth", "Rieth", "Stadtteile", 51.0041, 11.01491], ["roter-berg", "Roter Berg", "Stadtteile", 51.01798, 11.02121], ["wiesenhuegel", "Wiesenhügel", "Stadtteile", 50.95148, 11.06232]]);
   var RADIEN = [0.5, 1, 2, 5];
   function ortById(id) { for (var i = 0; i < ORTE.length; i++) if (ORTE[i][0] === id) return ORTE[i]; return null; }
   function km(a, b, c, d) { // Luftlinie in km (Haversine)
@@ -507,22 +517,63 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
       '<div class="scale"><span>' + cfg.fmt(cfg.min) + "</span><span>" + cfg.fmt(cfg.max) + "+</span></div></div>";
   }
 
+  function ortName(id) { return id === "standort" ? "Mein Standort" : (ortById(id) || [])[1] || ""; }
   function geoHtml() {
-    var groups = {}, opts = '<option value="">– Ort wählen –</option>';
-    opts += '<option value="standort"' + (state.ort === "standort" ? " selected" : "") + ">📍 Mein Standort</option>";
-    ORTE.forEach(function (o) { (groups[o[2]] = groups[o[2]] || []).push(o); });
-    Object.keys(groups).forEach(function (g) {
-      opts += '<optgroup label="' + esc(g) + '">' + groups[g].map(function (o) {
-        return '<option value="' + o[0] + '"' + (state.ort === o[0] ? " selected" : "") + (o[3] == null && o[0] !== "standort" ? " disabled" : "") + ">" + esc(o[1]) + "</option>";
-      }).join("") + "</optgroup>";
-    });
     var radios = RADIEN.map(function (r) {
       return '<button type="button" class="rad" data-radius="' + r + '" aria-pressed="' + (state.radius === r) + '"' + (state.ort ? "" : " disabled") + ">" + (r < 1 ? r * 1000 + " m" : r + " km") + "</button>";
     }).join("");
-    return '<label class="fs-hint" for="ort">Mittelpunkt</label><select id="ort" class="sel">' + opts + "</select>" +
+    return '<label class="fs-hint" for="ortq">Mittelpunkt</label>' +
+      '<div class="combo"><input id="ortq" class="sel" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="ortlist" autocomplete="off" placeholder="Ort suchen, z. B. Domplatz" value="' + esc(state.ort ? ortName(state.ort) : "") + '">' +
+      (state.ort ? '<button type="button" class="combo-x" id="ortx" aria-label="Ort entfernen">×</button>' : "") +
+      '<ul id="ortlist" class="combo-list" role="listbox" hidden></ul></div>' +
       '<div class="rads" role="group" aria-label="Radius">' + radios + "</div>" +
       (state.geoError ? '<p class="fs-hint err">' + esc(state.geoError) + "</p>" : '<p class="fs-hint">Luftlinie. Kantinen werden nach Entfernung sortiert.</p>');
   }
+
+  // ---- Orts-Suggest -----------------------------------------------------------
+  function norm(t) { return String(t).toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss").normalize("NFD").replace(/[̀-ͯ]/g, ""); }
+  var sugg = { items: [], idx: -1 };
+  function suggest(q) {
+    var n = norm(q.trim()), list = [["standort", "📍 Mein Standort", "Browser-Standort"]].concat(ORTE);
+    if (!n) return list.slice(0, 8);
+    var starts = [], contains = [];
+    list.forEach(function (o) {
+      var t = norm(o[1]) + " " + norm(o[2]);
+      if (norm(o[1]).indexOf(n) === 0 || norm(o[1]).split(/[\s/()-]+/).some(function (w) { return w.indexOf(n) === 0; })) starts.push(o);
+      else if (t.indexOf(n) >= 0) contains.push(o);
+    });
+    return starts.concat(contains).slice(0, 8);
+  }
+  function showSugg(input) {
+    var ul = $("ortlist"); sugg.items = suggest(input.value); sugg.idx = sugg.items.length ? 0 : -1;
+    if (!sugg.items.length) { ul.innerHTML = '<li class="combo-empty">Kein Ort gefunden</li>'; ul.hidden = false; input.setAttribute("aria-expanded", "true"); return; }
+    ul.innerHTML = sugg.items.map(function (o, i) {
+      return '<li role="option" id="ort-' + i + '" data-ort="' + o[0] + '" aria-selected="' + (i === sugg.idx) + '"><span>' + esc(o[1]) + '</span><small>' + esc(o[2]) + "</small></li>";
+    }).join("");
+    ul.hidden = false; input.setAttribute("aria-expanded", "true");
+    input.setAttribute("aria-activedescendant", sugg.idx >= 0 ? "ort-" + sugg.idx : "");
+  }
+  function hideSugg() { var ul = $("ortlist"), i = $("ortq"); if (ul) ul.hidden = true; if (i) { i.setAttribute("aria-expanded", "false"); i.removeAttribute("aria-activedescendant"); } }
+  function moveSugg(d) {
+    if (!sugg.items.length) return;
+    sugg.idx = (sugg.idx + d + sugg.items.length) % sugg.items.length;
+    Array.prototype.forEach.call(document.querySelectorAll("#ortlist li[role=option]"), function (li, i) { li.setAttribute("aria-selected", String(i === sugg.idx)); if (i === sugg.idx) li.scrollIntoView({ block: "nearest" }); });
+    $("ortq").setAttribute("aria-activedescendant", "ort-" + sugg.idx);
+  }
+  document.addEventListener("input", function (ev) { if (ev.target.id === "ortq") showSugg(ev.target); });
+  document.addEventListener("focusin", function (ev) { if (ev.target.id === "ortq") { ev.target.select(); showSugg({ value: "" }); } });
+  document.addEventListener("focusout", function (ev) { if (ev.target.id === "ortq") setTimeout(function () { hideSugg(); var i = $("ortq"); if (i && document.activeElement !== i) i.value = state.ort ? ortName(state.ort) : ""; }, 150); });
+  document.addEventListener("keydown", function (ev) {
+    if (ev.target.id !== "ortq") return;
+    if (ev.key === "ArrowDown") { ev.preventDefault(); if ($("ortlist").hidden) showSugg(ev.target); else moveSugg(1); }
+    else if (ev.key === "ArrowUp") { ev.preventDefault(); moveSugg(-1); }
+    else if (ev.key === "Enter") { ev.preventDefault(); if (sugg.idx >= 0) { var o = sugg.items[sugg.idx]; hideSugg(); setOrt(o[0]); } }
+    else if (ev.key === "Escape") { hideSugg(); ev.target.value = state.ort ? ortName(state.ort) : ""; ev.stopPropagation(); }
+  });
+  document.addEventListener("mousedown", function (ev) {
+    var li = ev.target.closest && ev.target.closest("#ortlist li[data-ort]");
+    if (li) { ev.preventDefault(); hideSugg(); setOrt(li.dataset.ort); }
+  });
 
   function activeCount(sec) {
     if (sec.geo) return state.ort ? 1 : 0;
@@ -702,7 +753,6 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
   // Checkboxen in der Seitenleiste
   document.addEventListener("change", function (ev) {
     var t = ev.target;
-    if (t.id === "ort") { setOrt(t.value); return; }
     if (t.type === "checkbox" && t.dataset.f && LIST[t.dataset.f]) { toggle(t.dataset.f, t.dataset.v); load(); }
   });
   // Offen/zu der Abschnitte merken
@@ -727,6 +777,7 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
     }
     else if (b.id === "clearall") { state.merkmale = []; state.ohne = []; state.zutaten = []; state.typ = []; state.kantinen = []; state.preis = null; state.kcal = null; state.ort = null; state.here = null; load(); }
     else if (b.dataset.radius) { state.radius = parseFloat(b.dataset.radius); load(); }
+    else if (b.id === "ortx") { setOrt(""); }
     else if (b.dataset.showall) { SHOWALL[b.dataset.showall] = true; renderFilters(last ? last.facets : {}); }
     else if (b.dataset.showless) { SHOWALL[b.dataset.showless] = false; renderFilters(last ? last.facets : {}); }
     else if (b.dataset.gruppe) { state.gruppe = b.dataset.gruppe; writeState(); renderFilters(last ? last.facets : {}); if (last) renderList(last); }
