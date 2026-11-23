@@ -236,6 +236,16 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
   .side-foot { display: block; padding: 12px 0 max(12px, env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); }
   body.noscroll { overflow: hidden; }
 }
+
+.sel { width: 100%; font: inherit; font-size: 0.92rem; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: 10px; padding: 7px 10px; margin: 2px 0 8px; }
+.sel:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.rads { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+.rad { font: inherit; font-size: 0.85rem; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 3px 11px; cursor: pointer; }
+.rad[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.rad:disabled { opacity: 0.4; cursor: default; }
+.fs-hint.err { color: var(--pork); }
+.where { display: block; color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
+.where b { color: var(--accent); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -316,12 +326,24 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
   var PREIS = { field: "preis_stufe", step: 0.5, min: 2, max: 12, fmt: function (v) { return v.toFixed(2).replace(".", ",") + " €"; }, key: function (v) { return v.toFixed(2); } };
   var KCAL = { field: "kcal_stufe", step: 100, min: 0, max: 1200, fmt: function (v) { return v + " kcal"; }, key: function (v) { return String(v); } };
 
+  // Orte für die Umkreissuche: [id, Name, Gruppe, lat, lon]. Quasiris steht immer oben.
+  var ORTE = [["quasiris", "Quasiris Office", "Favorit", null, null]].concat([["anger", "Anger", "Plätze", 50.97646, 11.03401], ["bruehler-garten", "Brühler Garten", "Plätze", 50.97363, 11.01986], ["domplatz", "Domplatz", "Plätze", 50.97755, 11.02282], ["fischmarkt-rathaus", "Fischmarkt / Rathaus", "Plätze", 50.97782, 11.02881], ["gothaer-platz", "Gothaer Platz", "Plätze", 50.97135, 11.01139], ["hauptbahnhof", "Hauptbahnhof", "Plätze", 50.97277, 11.03789], ["hirschgarten-staatskanzlei", "Hirschgarten / Staatskanzlei", "Plätze", 50.97357, 11.02882], ["juri-gagarin-ring-theater", "Juri-Gagarin-Ring / Theater", "Plätze", 50.97455, 11.01792], ["kraemerbruecke", "Krämerbrücke", "Plätze", 50.97875, 11.03094], ["leipziger-platz", "Leipziger Platz", "Plätze", 50.98135, 11.04178], ["nordstrand", "Nordstrand", "Plätze", 50.99855, 11.05187], ["petersberg", "Petersberg", "Plätze", 50.97881, 11.01862], ["stadtpark", "Stadtpark", "Plätze", 50.97012, 11.03843], ["wenigemarkt", "Wenigemarkt", "Plätze", 50.97863, 11.032], ["agentur-fuer-arbeit", "Agentur für Arbeit", "Institutionen", 50.95956, 11.04451], ["bundesarbeitsgericht", "Bundesarbeitsgericht", "Institutionen", 50.97748, 11.01457], ["fh-leipziger-strasse", "FH Leipziger Straße", "Institutionen", 50.99156, 11.05475], ["fh-schlueterstrasse", "FH Schlüterstraße", "Institutionen", 50.9855, 11.02445], ["fachhochschule-altonaer-str", "Fachhochschule (Altonaer Str.)", "Institutionen", 50.98502, 11.04276], ["flughafen-erfurt-weimar", "Flughafen Erfurt-Weimar", "Institutionen", 50.97927, 10.95865], ["hauptfriedhof", "Hauptfriedhof", "Institutionen", 50.97294, 10.99332], ["helios-klinikum", "Helios Klinikum", "Institutionen", 50.99268, 11.01345], ["ihk-erfurt", "IHK Erfurt", "Institutionen", 50.96339, 11.03296], ["justizzentrum-arbeitsgericht", "Justizzentrum / Arbeitsgericht", "Institutionen", 50.97561, 11.01376], ["mdr-landesfunkhaus-kika", "MDR Landesfunkhaus / KiKA", "Institutionen", 50.96226, 10.99576], ["messe-erfurt", "Messe Erfurt", "Institutionen", 50.95932, 10.98967], ["sparkasse-hauptverwaltung", "Sparkasse Hauptverwaltung", "Institutionen", 50.97139, 11.01698], ["stadtwerke-erfurt", "Stadtwerke Erfurt", "Institutionen", 50.98981, 11.02787], ["steigerwaldstadion", "Steigerwaldstadion", "Institutionen", 50.96016, 11.03728], ["thueringenpark", "Thüringenpark", "Institutionen", 51.00927, 10.99434], ["thueringer-landtag", "Thüringer Landtag", "Institutionen", 50.96398, 11.03442], ["thueringer-zoopark", "Thüringer Zoopark", "Institutionen", 51.02324, 11.02359], ["universitaet-erfurt", "Universität Erfurt", "Institutionen", 50.98921, 11.00902], ["egapark", "egapark", "Institutionen", 50.96477, 10.99765], ["andreasvorstadt", "Andreasvorstadt", "Stadtteile", 50.98813, 11.01206], ["bruehlervorstadt", "Brühlervorstadt", "Stadtteile", 50.97161, 10.99822], ["daberstedt", "Daberstedt", "Stadtteile", 50.96683, 11.05176], ["herrenberg", "Herrenberg", "Stadtteile", 50.95779, 11.06652], ["hochheim", "Hochheim", "Stadtteile", 50.9566, 11.00048], ["ilversgehofen", "Ilversgehofen", "Stadtteile", 50.99885, 11.03065], ["johannesvorstadt", "Johannesvorstadt", "Stadtteile", 50.99102, 11.04317], ["kraempfervorstadt", "Krämpfervorstadt", "Stadtteile", 50.981, 11.04617], ["loebervorstadt", "Löbervorstadt", "Stadtteile", 50.96425, 11.02666], ["marbach", "Marbach", "Stadtteile", 50.99679, 10.98758], ["melchendorf", "Melchendorf", "Stadtteile", 50.95013, 11.07053], ["moskauer-platz", "Moskauer Platz", "Stadtteile", 51.0117, 10.99915], ["rieth", "Rieth", "Stadtteile", 51.0041, 11.01491], ["roter-berg", "Roter Berg", "Stadtteile", 51.01798, 11.02121], ["wiesenhuegel", "Wiesenhügel", "Stadtteile", 50.95148, 11.06232]]);
+  var RADIEN = [0.5, 1, 2, 5];
+  function ortById(id) { for (var i = 0; i < ORTE.length; i++) if (ORTE[i][0] === id) return ORTE[i]; return null; }
+  function km(a, b, c, d) { // Luftlinie in km (Haversine)
+    var R = 6371, x = (c - a) * Math.PI / 180, y = (d - b) * Math.PI / 180;
+    var h = Math.sin(x / 2) * Math.sin(x / 2) + Math.cos(a * Math.PI / 180) * Math.cos(c * Math.PI / 180) * Math.sin(y / 2) * Math.sin(y / 2);
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+  function fmtKm(d) { return d < 1 ? Math.round(d * 1000 / 50) * 50 + " m" : d.toFixed(1).replace(".", ",") + " km"; }
+
   function kantineId(name) { for (var k in KANTINE) if (KANTINE[k] === name) return k; return null; }
 
   var state = {
     day: null, defaultDay: null, urlDay: null, tage: [], seq: 0, q: "",
     gruppe: "gast", merkmale: [], ohne: [], zutaten: [], typ: [], kantinen: [],
-    preis: null, kcal: null // [von, bis] als Stufen-Untergrenzen; null = alles
+    preis: null, kcal: null, // [von, bis] als Stufen-Untergrenzen; null = alles
+    ort: null, radius: 1, here: null // ort: Orts-id oder "standort"; here: [lat, lon] des Mittelpunkts
   };
 
   var $ = function (id) { return document.getElementById(id); };
@@ -334,7 +356,7 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
   // ---- Zustand: URL (Lesezeichen) vor Browser-Speicher ----------------------
   (function readState() {
     var p = new URLSearchParams(location.search);
-    var keys = ["art", "k", "q", "tag", "ohne", "z", "typ", "preis", "kcal", "gruppe"];
+    var keys = ["art", "k", "q", "tag", "ohne", "z", "typ", "preis", "kcal", "gruppe", "ort", "r"];
     var hatUrl = keys.some(function (k) { return p.has(k); });
     var saved = {};
     if (!hatUrl) { try { saved = JSON.parse(localStorage.getItem("mittago.state") || "{}") || {}; } catch (e) { saved = {}; } }
@@ -349,6 +371,9 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
     state.preis = parseRange(hatUrl ? p.get("preis") : saved.preis);
     state.kcal = parseRange(hatUrl ? p.get("kcal") : saved.kcal);
     if (hatUrl) { state.q = (p.get("q") || "").trim(); state.urlDay = p.get("tag"); }
+    var ort = hatUrl ? p.get("ort") : saved.ort, r = parseFloat(hatUrl ? p.get("r") : saved.r);
+    if (ort && (ort === "standort" || ortById(ort))) state.ort = ort;
+    if (RADIEN.indexOf(r) >= 0) state.radius = r;
   })();
 
   function rangeStr(r) { return r ? r[0] + "-" + r[1] : null; }
@@ -365,13 +390,15 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
     if (state.preis) p.set("preis", rangeStr(state.preis));
     if (state.kcal) p.set("kcal", rangeStr(state.kcal));
     if (state.gruppe !== "gast") p.set("gruppe", state.gruppe);
+    if (state.ort) { p.set("ort", state.ort); p.set("r", String(state.radius)); }
     var qs = p.toString();
     history.replaceState(null, "", location.pathname + (qs ? "?" + qs : ""));
     try {
       localStorage.setItem("mittago.state", JSON.stringify({
         art: state.merkmale, ohne: state.ohne, z: state.zutaten, typ: state.typ,
         k: state.kantinen.map(kantineId).filter(Boolean), gruppe: state.gruppe,
-        preis: rangeStr(state.preis), kcal: rangeStr(state.kcal)
+        preis: rangeStr(state.preis), kcal: rangeStr(state.kcal),
+        ort: state.ort === "standort" ? null : state.ort, r: state.radius // eigener Standort wird nicht gespeichert
       }));
     } catch (e) {}
   }
@@ -394,6 +421,11 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
     (opts.kantinen || []).forEach(function (v) { add("f.kantine", v); });
     if (opts.preis) stufen(PREIS, opts.preis).forEach(function (v) { add("f.preis_stufe", v); });
     if (opts.kcal) stufen(KCAL, opts.kcal).forEach(function (v) { add("f.kcal_stufe", v); });
+    if (opts.geo) { // Umkreis als Rechteck über die Slider-Facetten lat/lon
+      var dLat = opts.geo.r / 111.32, dLon = opts.geo.r / (111.32 * Math.cos(opts.geo.lat * Math.PI / 180));
+      add("f.lat.range", (opts.geo.lat - dLat).toFixed(5) + "," + (opts.geo.lat + dLat).toFixed(5));
+      add("f.lon.range", (opts.geo.lon - dLon).toFixed(5) + "," + (opts.geo.lon + dLon).toFixed(5));
+    }
     return fetch(API + "?" + p.join("&")).then(function (r) {
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
@@ -406,7 +438,8 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
   }
   function current() {
     return { q: state.q, tag: state.day === "alle" ? null : state.day, merkmale: state.merkmale, ohne: state.ohne,
-      zutaten: state.zutaten, typ: state.typ, kantinen: state.kantinen, preis: state.preis, kcal: state.kcal };
+      zutaten: state.zutaten, typ: state.typ, kantinen: state.kantinen, preis: state.preis, kcal: state.kcal,
+      geo: state.ort && state.here ? { lat: state.here[0], lon: state.here[1], r: state.radius } : null };
   }
   function count(facet, value) {
     for (var i = 0; i < (facet || []).length; i++) if (facet[i].value === value) return facet[i].count;
@@ -423,10 +456,11 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
   }
 
   // Abschnitte der Seitenleiste; offen/zu wird im Browser gemerkt
-  var OPEN = { merkmale: true, preis: true, kantine: true };
+  var OPEN = { umkreis: true, merkmale: true, preis: true, kantine: true };
   try { var o = JSON.parse(localStorage.getItem("mittago.open") || "null"); if (o) OPEN = o; } catch (e) {}
   var SHOWALL = {};
   var SECS = [
+    { key: "umkreis", title: "Umkreis", geo: true },
     { key: "merkmale", title: "Ernährung", list: "merkmale" },
     { key: "preis", title: "Preis", range: true },
     { key: "kantine", title: "Kantinen", list: "kantinen" },
@@ -473,7 +507,25 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
       '<div class="scale"><span>' + cfg.fmt(cfg.min) + "</span><span>" + cfg.fmt(cfg.max) + "+</span></div></div>";
   }
 
+  function geoHtml() {
+    var groups = {}, opts = '<option value="">– Ort wählen –</option>';
+    opts += '<option value="standort"' + (state.ort === "standort" ? " selected" : "") + ">📍 Mein Standort</option>";
+    ORTE.forEach(function (o) { (groups[o[2]] = groups[o[2]] || []).push(o); });
+    Object.keys(groups).forEach(function (g) {
+      opts += '<optgroup label="' + esc(g) + '">' + groups[g].map(function (o) {
+        return '<option value="' + o[0] + '"' + (state.ort === o[0] ? " selected" : "") + (o[3] == null && o[0] !== "standort" ? " disabled" : "") + ">" + esc(o[1]) + "</option>";
+      }).join("") + "</optgroup>";
+    });
+    var radios = RADIEN.map(function (r) {
+      return '<button type="button" class="rad" data-radius="' + r + '" aria-pressed="' + (state.radius === r) + '"' + (state.ort ? "" : " disabled") + ">" + (r < 1 ? r * 1000 + " m" : r + " km") + "</button>";
+    }).join("");
+    return '<label class="fs-hint" for="ort">Mittelpunkt</label><select id="ort" class="sel">' + opts + "</select>" +
+      '<div class="rads" role="group" aria-label="Radius">' + radios + "</div>" +
+      (state.geoError ? '<p class="fs-hint err">' + esc(state.geoError) + "</p>" : '<p class="fs-hint">Luftlinie. Kantinen werden nach Entfernung sortiert.</p>');
+  }
+
   function activeCount(sec) {
+    if (sec.geo) return state.ort ? 1 : 0;
     if (sec.range) return state[sec.key] ? 1 : 0;
     return state[sec.list].length;
   }
@@ -482,7 +534,8 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
     var focus = document.activeElement && document.activeElement.dataset ? { f: document.activeElement.dataset.f, v: document.activeElement.dataset.v } : null;
     var html = SECS.map(function (sec) {
       var body, n = activeCount(sec);
-      if (sec.range) {
+      if (sec.geo) body = geoHtml();
+      else if (sec.range) {
         body = rangeHtml(sec.key === "preis" ? PREIS : KCAL, sec.title, state[sec.key], f[sec.key === "preis" ? "preis_stufe" : "kcal_stufe"]);
       } else {
         var opts = optionsFor(sec, f);
@@ -507,6 +560,10 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
   function renderActive() {
     var pills = [];
     SECS.forEach(function (sec) {
+      if (sec.geo) {
+        if (state.ort) { var o = state.ort === "standort" ? "Mein Standort" : (ortById(state.ort) || [])[1]; pills.push({ f: "umkreis", v: "", t: (state.radius < 1 ? state.radius * 1000 + " m" : state.radius + " km") + " um " + o }); }
+        return;
+      }
       if (sec.range) {
         var r = state[sec.key]; if (!r) return;
         var cfg = sec.key === "preis" ? PREIS : KCAL;
@@ -541,11 +598,16 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
   function group(items) {
     var g = {}, meta = {}, out = "";
     items.forEach(function (d) { (g[d.kantine_id] = g[d.kantine_id] || []).push(d); meta[d.kantine_id] = d; });
-    Object.keys(g).sort(function (a, b) { return ORDER.indexOf(a) - ORDER.indexOf(b); }).forEach(function (id) {
-      var k = meta[id];
+    var dist = function (id) { var k = meta[id]; return state.here && k.lat != null ? km(state.here[0], state.here[1], k.lat, k.lon) : null; };
+    Object.keys(g).sort(function (a, b) {
+      var da = dist(a), db = dist(b);
+      return da != null && db != null ? da - db : ORDER.indexOf(a) - ORDER.indexOf(b);
+    }).forEach(function (id) {
+      var k = meta[id], d = dist(id);
       g[id].sort(function (a, b) { return a.id.localeCompare(b.id, "de", { numeric: true }); });
       var link = k.quelle ? '<a href="' + esc(k.quelle) + '" target="_blank" rel="noopener">Original-Speiseplan ↗</a>' : "";
-      out += '<section class="tray"><div class="tray-head"><h2>' + esc(k.kantine) + "</h2>" + link + "</div>" + g[id].map(dishHtml).join("") + "</section>";
+      var where = '<span class="where">' + (d != null ? '<b>' + fmtKm(d) + "</b> · " : "") + esc(k.adresse || "") + "</span>";
+      out += '<section class="tray"><div class="tray-head"><div><h2>' + esc(k.kantine) + "</h2>" + where + "</div>" + link + "</div>" + g[id].map(dishHtml).join("") + "</section>";
     });
     return out;
   }
@@ -594,6 +656,8 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
       if (state.urlDay === "woche" || state.q) state.day = "alle";
       else if (state.urlDay && state.tage.indexOf(state.urlDay) >= 0) state.day = state.urlDay;
       if (state.q) { $("q").value = state.q; $("clear").hidden = false; }
+      if (state.ort === "standort") { setOrt("standort"); return; }
+      if (state.ort) { var o = ortById(state.ort); if (o && o[3] != null) state.here = [o[3], o[4]]; else state.ort = null; }
       load();
     }).catch(function (e) {
       $("status").textContent = "Speisepläne konnten nicht geladen werden (" + e.message + "). Seite neu laden oder später versuchen.";
@@ -619,9 +683,26 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
     var arr = state[LIST[f]], i = arr.indexOf(v);
     if (i >= 0) arr.splice(i, 1); else arr.push(v);
   }
+  function setOrt(id) {
+    state.geoError = null;
+    if (!id) { state.ort = null; state.here = null; load(); return; }
+    if (id === "standort") {
+      if (!navigator.geolocation) { state.geoError = "Dein Browser gibt keinen Standort frei."; state.ort = null; load(); return; }
+      state.ort = "standort"; $("status").textContent = "Standort wird ermittelt …";
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        state.here = [pos.coords.latitude, pos.coords.longitude]; load();
+      }, function () {
+        state.ort = null; state.here = null; state.geoError = "Standort nicht verfügbar. Bitte einen Ort aus der Liste wählen."; load();
+      }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
+      return;
+    }
+    var o = ortById(id); if (!o || o[3] == null) return;
+    state.ort = id; state.here = [o[3], o[4]]; load();
+  }
   // Checkboxen in der Seitenleiste
   document.addEventListener("change", function (ev) {
     var t = ev.target;
+    if (t.id === "ort") { setOrt(t.value); return; }
     if (t.type === "checkbox" && t.dataset.f && LIST[t.dataset.f]) { toggle(t.dataset.f, t.dataset.v); load(); }
   });
   // Offen/zu der Abschnitte merken
@@ -640,10 +721,12 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
     if (!b || b.disabled) return;
     if (b.dataset.day) { state.day = b.dataset.day; lastDay = null; load(); }
     else if (b.dataset.rm) {
-      if (b.dataset.rm === "preis" || b.dataset.rm === "kcal") state[b.dataset.rm] = null; else toggle(b.dataset.rm, b.dataset.v);
+      if (b.dataset.rm === "umkreis") { state.ort = null; state.here = null; }
+      else if (b.dataset.rm === "preis" || b.dataset.rm === "kcal") state[b.dataset.rm] = null; else toggle(b.dataset.rm, b.dataset.v);
       load();
     }
-    else if (b.id === "clearall") { state.merkmale = []; state.ohne = []; state.zutaten = []; state.typ = []; state.kantinen = []; state.preis = null; state.kcal = null; load(); }
+    else if (b.id === "clearall") { state.merkmale = []; state.ohne = []; state.zutaten = []; state.typ = []; state.kantinen = []; state.preis = null; state.kcal = null; state.ort = null; state.here = null; load(); }
+    else if (b.dataset.radius) { state.radius = parseFloat(b.dataset.radius); load(); }
     else if (b.dataset.showall) { SHOWALL[b.dataset.showall] = true; renderFilters(last ? last.facets : {}); }
     else if (b.dataset.showless) { SHOWALL[b.dataset.showless] = false; renderFilters(last ? last.facets : {}); }
     else if (b.dataset.gruppe) { state.gruppe = b.dataset.gruppe; writeState(); renderFilters(last ? last.facets : {}); if (last) renderList(last); }
