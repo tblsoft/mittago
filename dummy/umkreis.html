@@ -79,6 +79,24 @@ svg { display: block; width: 100%; height: auto; }
 .map { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; touch-action: none; }
 .hint { font-size: 0.75rem; color: var(--muted); }
 .cta { justify-self: start; border: 0; background: var(--accent); color: var(--accent-ink); border-radius: 999px; padding: 4px 12px; cursor: pointer; font-size: 0.84rem; font-weight: 600; }
+
+/* Orts-Suggest */
+.where { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: grid; gap: 6px; max-width: 560px; }
+.combo { position: relative; }
+.combo input { width: 100%; font: inherit; font-size: 1rem; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 40px 10px 38px; outline: none; }
+.combo input:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); outline: none; }
+.pinicon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--accent); }
+.combo-x { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border: 0; background: none; color: var(--muted); font-size: 1.2rem; border-radius: 50%; cursor: pointer; }
+.combo-x:hover { background: var(--line); }
+.combo-list { position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: 4px; list-style: none; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 28px color-mix(in srgb, var(--ink) 16%, transparent); max-height: 320px; overflow-y: auto; }
+.combo-list li { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.combo-list li small { color: var(--muted); font-size: 0.75rem; white-space: nowrap; }
+.combo-list li[aria-selected="true"], .combo-list li:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.combo-list li mark { background: none; color: var(--accent); font-weight: 600; }
+.combo-list .grp { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); padding: 8px 10px 2px; cursor: default; }
+.combo-list .grp:hover { background: none; }
+.combo-empty { color: var(--muted); cursor: default !important; }
+.hint.err { color: var(--pin); }
 </style>
 </head>
 <body>
@@ -88,8 +106,18 @@ svg { display: block; width: 100%; height: auto; }
     <p class="lead">Acht Bausteine für denselben Filter. Alle Karten teilen sich den Zustand: Ein Klick in einer Variante ändert alle. Die Zahlen entsprechen der geplanten QSC-Entfernungs-Facette (kumulativ, unabhängig vom gewählten Radius). Daten: echte Gerichte vom 24.11., hier im Browser gerechnet.</p>
   </div>
 
+  <div class="where">
+    <label class="lbl" for="ortq">Umkreis um</label>
+    <div class="combo">
+      <svg class="pinicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="10" r="2.5" fill="currentColor"/></svg>
+      <input id="ortq" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="ortlist" autocomplete="off" placeholder="Ort, Platz oder Stadtteil suchen">
+      <button type="button" class="combo-x" id="ortx" aria-label="Eingabe leeren" hidden>×</button>
+      <ul id="ortlist" class="combo-list" role="listbox" hidden></ul>
+    </div>
+    <p class="hint" id="orthint">Tippen, z. B. „dom“, „brü“ oder „uni“. Pfeiltasten und Enter wählen, Esc schließt.</p>
+  </div>
+
   <div class="demo" aria-label="Demo-Steuerung">
-    <span><b>Mittelpunkt:</b><select id="ort" aria-label="Mittelpunkt"></select></span>
     <label><input type="checkbox" id="veg"> nur vegetarisch</label>
     <span><b>Zählen:</b><button class="pill" data-zaehl="gerichte">Gerichte</button> <button class="pill" data-zaehl="kantinen">Kantinen</button> <button class="pill" data-zaehl="beides">beides</button></span>
   </div>
@@ -100,7 +128,7 @@ svg { display: block; width: 100%; height: auto; }
 <script>
 (function () {
   "use strict";
-  var DATA = {"tag": "2026-11-24", "dishes": [{"k": "bergstrom", "g": "Vegetarisch gefüllte Zucchini mit Tomatenreis und Salat", "art": "vegetarisch", "veg": true, "preis": 7.8, "kcal": 580, "est": true}, {"k": "bergstrom", "g": "Köttbullar mit Speckbohnen, Kartoffelpüree und Rahmsauce", "art": "schwein", "veg": false, "preis": 8.0, "kcal": 710, "est": true}, {"k": "sparkasse", "g": "Tortelloni, Ricotta, Gemüse, Rucola", "art": "vegetarisch?", "veg": true, "preis": 8.3, "kcal": 620, "est": true}, {"k": "sparkasse", "g": "Germknödel, Pflaumenmusfüllung, Vanillesauce", "art": "vegetarisch", "veg": true, "preis": 4.6, "kcal": 600, "est": true}, {"k": "sparkasse", "g": "Schweineschnitzel, Kaisergemüse, Hollandaise, Kartoffel Wedges", "art": "schwein", "veg": false, "preis": 9.1, "kcal": 1010, "est": true}, {"k": "stw-fh", "g": "Mediterranes Sojageschnetzeltes mit Reiskornnudeln", "art": "vegetarisch", "veg": true, "preis": 5.8, "kcal": 620, "est": true}, {"k": "stw-fh", "g": "Ofenkartoffel mit Tomaten-Schnittlauchquark und Salat", "art": "vegetarisch?", "veg": true, "preis": 6.5, "kcal": 550, "est": true}, {"k": "stw-fh", "g": "Falafel mit Tsatsikidip und Tomatenreis, Rotkrautsalat", "art": "vegetarisch", "veg": true, "preis": 7.3, "kcal": 580, "est": true}, {"k": "stw-fh", "g": "Hähnchenbrust im Knuspermantel mit Tomatensoße und Tagliatelle, dazu eine Beilage", "art": "gefluegel", "veg": false, "preis": 7.6, "kcal": 620, "est": true}, {"k": "stw-leipziger", "g": "Mediterranes Sojageschnetzeltes mit Reiskornnudeln", "art": "vegetarisch", "veg": true, "preis": 5.8, "kcal": 620, "est": true}, {"k": "stw-leipziger", "g": "Ofenkartoffel mit Tomaten-Schnittlauchquark und Salat", "art": "vegetarisch?", "veg": true, "preis": 6.5, "kcal": 550, "est": true}, {"k": "stw-schlueter", "g": "Mediterranes Sojageschnetzeltes mit Reiskornnudeln", "art": "vegetarisch", "veg": true, "preis": 5.8, "kcal": 620, "est": true}, {"k": "stw-schlueter", "g": "Ofenkartoffel mit Tomaten-Schnittlauchquark und Salat", "art": "vegetarisch?", "veg": true, "preis": 6.5, "kcal": 550, "est": true}, {"k": "stw-uni", "g": "Bohnen- Zucchini- Chili mit Koriander dazu Couscous", "art": "vegetarisch?", "veg": true, "preis": 5.8, "kcal": 620, "est": true}, {"k": "stw-uni", "g": "ab 10:00 Uhr Pastateller: Maccaroni and Cheese und BIO-Spaghetti, Curry-Gemüse-Soße, mediterranes Tomatenragout, Reibekäsealternative, Reibekäse", "art": "vegetarisch?", "veg": true, "preis": 6.8, "kcal": 620, "est": true}, {"k": "stw-uni", "g": "Gemüse-Nudel-Gratin Griechische Art mit Hirtenkäse", "art": "vegetarisch?", "veg": true, "preis": 6.8, "kcal": 740, "est": true}, {"k": "stw-uni", "g": "Sojagulasch mit Champignons, Spätzle, 1 Soja Dessert mit Nuss Geschmack oder 1 Rotkohlsalat", "art": "vegetarisch", "veg": true, "preis": 6.8, "kcal": 560, "est": true}, {"k": "stw-uni", "g": "Hähnchenbrust im Knuspermantel, Tomatensoße, Kaisergemüse, grüne Tagliatelle oder Petersilienkartoffeln", "art": "gefluegel", "veg": false, "preis": 7.6, "kcal": 620, "est": true}, {"k": "tks", "g": "Gebratene Hähnchenfilets mit Zitronensauce, Parmesan-Kartoffelpüree", "art": "gefluegel", "veg": false, "preis": 8.0, "kcal": 607, "est": false}, {"k": "tks", "g": "Bolognesesauce, Spaghetti, Parmesan", "art": "schwein", "veg": false, "preis": 7.0, "kcal": 583, "est": false}, {"k": "tks", "g": "Gekochte Eier, Senfsauce, Petersilienkartoffeln, Rote Beete Salat", "art": "vegetarisch", "veg": true, "preis": 6.0, "kcal": 527, "est": false}, {"k": "tks", "g": "Tagesangebot (wird noch bekannt gegeben)", "art": "unbekannt", "veg": false, "preis": 5.0, "kcal": null, "est": true}], "kantinen": [{"id": "bergstrom", "name": "Kantine am Bergstrom", "adresse": "Koenbergkstraße 1, 99084 Erfurt", "lat": 50.97574, "lon": 11.01962}, {"id": "sparkasse", "name": "Sparkasse Kantine", "adresse": "Brühler Str. 45, 99084 Erfurt", "lat": 50.97139, "lon": 11.01698}, {"id": "stw-fh", "name": "Mensa Altonaer Straße (FH)", "adresse": "Altonaer Straße 25, 99085 Erfurt", "lat": 50.98502, "lon": 11.04276}, {"id": "stw-leipziger", "name": "Cafeteria Leipziger Straße (FH)", "adresse": "Leipziger Straße 77, 99085 Erfurt", "lat": 50.99156, "lon": 11.05475}, {"id": "stw-schlueter", "name": "Cafeteria Schlüterstraße (FH)", "adresse": "Schlüterstraße 1, 99089 Erfurt", "lat": 50.9855, "lon": 11.02445}, {"id": "stw-uni", "name": "Mensa Nordhäuser Straße (Uni)", "adresse": "Nordhäuser Straße 63, 99089 Erfurt", "lat": 50.99084, "lon": 11.00888}, {"id": "tks", "name": "Casino im Justizzentrum", "adresse": "Rudolfstraße 46, 99092 Erfurt", "lat": 50.97575, "lon": 11.01378}], "orte": [{"name": "Quasiris Office", "lat": 50.972, "lon": 11.01171}, {"name": "Domplatz", "lat": 50.97755, "lon": 11.02282}, {"name": "Hauptbahnhof", "lat": 50.97277, "lon": 11.03789}, {"name": "Anger", "lat": 50.97646, "lon": 11.03401}, {"name": "Gothaer Platz", "lat": 50.97135, "lon": 11.01139}, {"name": "Fachhochschule (Altonaer Str.)", "lat": 50.98502, "lon": 11.04276}, {"name": "Universität Erfurt", "lat": 50.98921, "lon": 11.00902}, {"name": "Thüringer Landtag", "lat": 50.96398, "lon": 11.03442}, {"name": "Krämerbrücke", "lat": 50.97875, "lon": 11.03094}, {"name": "Messe Erfurt", "lat": 50.95932, "lon": 10.98967}]};
+  var DATA = {"tag": "2026-11-24", "dishes": [{"k": "bergstrom", "g": "Vegetarisch gefüllte Zucchini mit Tomatenreis und Salat", "art": "vegetarisch", "veg": true, "preis": 7.8, "kcal": 580, "est": true}, {"k": "bergstrom", "g": "Köttbullar mit Speckbohnen, Kartoffelpüree und Rahmsauce", "art": "schwein", "veg": false, "preis": 8.0, "kcal": 710, "est": true}, {"k": "sparkasse", "g": "Tortelloni, Ricotta, Gemüse, Rucola", "art": "vegetarisch?", "veg": true, "preis": 8.3, "kcal": 620, "est": true}, {"k": "sparkasse", "g": "Germknödel, Pflaumenmusfüllung, Vanillesauce", "art": "vegetarisch", "veg": true, "preis": 4.6, "kcal": 600, "est": true}, {"k": "sparkasse", "g": "Schweineschnitzel, Kaisergemüse, Hollandaise, Kartoffel Wedges", "art": "schwein", "veg": false, "preis": 9.1, "kcal": 1010, "est": true}, {"k": "stw-fh", "g": "Mediterranes Sojageschnetzeltes mit Reiskornnudeln", "art": "vegetarisch", "veg": true, "preis": 5.8, "kcal": 620, "est": true}, {"k": "stw-fh", "g": "Ofenkartoffel mit Tomaten-Schnittlauchquark und Salat", "art": "vegetarisch?", "veg": true, "preis": 6.5, "kcal": 550, "est": true}, {"k": "stw-fh", "g": "Falafel mit Tsatsikidip und Tomatenreis, Rotkrautsalat", "art": "vegetarisch", "veg": true, "preis": 7.3, "kcal": 580, "est": true}, {"k": "stw-fh", "g": "Hähnchenbrust im Knuspermantel mit Tomatensoße und Tagliatelle, dazu eine Beilage", "art": "gefluegel", "veg": false, "preis": 7.6, "kcal": 620, "est": true}, {"k": "stw-leipziger", "g": "Mediterranes Sojageschnetzeltes mit Reiskornnudeln", "art": "vegetarisch", "veg": true, "preis": 5.8, "kcal": 620, "est": true}, {"k": "stw-leipziger", "g": "Ofenkartoffel mit Tomaten-Schnittlauchquark und Salat", "art": "vegetarisch?", "veg": true, "preis": 6.5, "kcal": 550, "est": true}, {"k": "stw-schlueter", "g": "Mediterranes Sojageschnetzeltes mit Reiskornnudeln", "art": "vegetarisch", "veg": true, "preis": 5.8, "kcal": 620, "est": true}, {"k": "stw-schlueter", "g": "Ofenkartoffel mit Tomaten-Schnittlauchquark und Salat", "art": "vegetarisch?", "veg": true, "preis": 6.5, "kcal": 550, "est": true}, {"k": "stw-uni", "g": "Bohnen- Zucchini- Chili mit Koriander dazu Couscous", "art": "vegetarisch?", "veg": true, "preis": 5.8, "kcal": 620, "est": true}, {"k": "stw-uni", "g": "ab 10:00 Uhr Pastateller: Maccaroni and Cheese und BIO-Spaghetti, Curry-Gemüse-Soße, mediterranes Tomatenragout, Reibekäsealternative, Reibekäse", "art": "vegetarisch?", "veg": true, "preis": 6.8, "kcal": 620, "est": true}, {"k": "stw-uni", "g": "Gemüse-Nudel-Gratin Griechische Art mit Hirtenkäse", "art": "vegetarisch?", "veg": true, "preis": 6.8, "kcal": 740, "est": true}, {"k": "stw-uni", "g": "Sojagulasch mit Champignons, Spätzle, 1 Soja Dessert mit Nuss Geschmack oder 1 Rotkohlsalat", "art": "vegetarisch", "veg": true, "preis": 6.8, "kcal": 560, "est": true}, {"k": "stw-uni", "g": "Hähnchenbrust im Knuspermantel, Tomatensoße, Kaisergemüse, grüne Tagliatelle oder Petersilienkartoffeln", "art": "gefluegel", "veg": false, "preis": 7.6, "kcal": 620, "est": true}, {"k": "tks", "g": "Gebratene Hähnchenfilets mit Zitronensauce, Parmesan-Kartoffelpüree", "art": "gefluegel", "veg": false, "preis": 8.0, "kcal": 607, "est": false}, {"k": "tks", "g": "Bolognesesauce, Spaghetti, Parmesan", "art": "schwein", "veg": false, "preis": 7.0, "kcal": 583, "est": false}, {"k": "tks", "g": "Gekochte Eier, Senfsauce, Petersilienkartoffeln, Rote Beete Salat", "art": "vegetarisch", "veg": true, "preis": 6.0, "kcal": 527, "est": false}, {"k": "tks", "g": "Tagesangebot (wird noch bekannt gegeben)", "art": "unbekannt", "veg": false, "preis": 5.0, "kcal": null, "est": true}], "kantinen": [{"id": "bergstrom", "name": "Kantine am Bergstrom", "adresse": "Koenbergkstraße 1, 99084 Erfurt", "lat": 50.97574, "lon": 11.01962}, {"id": "sparkasse", "name": "Sparkasse Kantine", "adresse": "Brühler Str. 45, 99084 Erfurt", "lat": 50.97139, "lon": 11.01698}, {"id": "stw-fh", "name": "Mensa Altonaer Straße (FH)", "adresse": "Altonaer Straße 25, 99085 Erfurt", "lat": 50.98502, "lon": 11.04276}, {"id": "stw-leipziger", "name": "Cafeteria Leipziger Straße (FH)", "adresse": "Leipziger Straße 77, 99085 Erfurt", "lat": 50.99156, "lon": 11.05475}, {"id": "stw-schlueter", "name": "Cafeteria Schlüterstraße (FH)", "adresse": "Schlüterstraße 1, 99089 Erfurt", "lat": 50.9855, "lon": 11.02445}, {"id": "stw-uni", "name": "Mensa Nordhäuser Straße (Uni)", "adresse": "Nordhäuser Straße 63, 99089 Erfurt", "lat": 50.99084, "lon": 11.00888}, {"id": "tks", "name": "Casino im Justizzentrum", "adresse": "Rudolfstraße 46, 99092 Erfurt", "lat": 50.97575, "lon": 11.01378}], "orte": [{"name": "Quasiris Office", "gruppe": "Rudolfstr. 55", "lat": 50.972, "lon": 11.01171}, {"name": "Anger", "gruppe": "Plätze", "lat": 50.97646, "lon": 11.03401}, {"name": "Brühler Garten", "gruppe": "Plätze", "lat": 50.97363, "lon": 11.01986}, {"name": "Domplatz", "gruppe": "Plätze", "lat": 50.97755, "lon": 11.02282}, {"name": "Fischmarkt / Rathaus", "gruppe": "Plätze", "lat": 50.97782, "lon": 11.02881}, {"name": "Gothaer Platz", "gruppe": "Plätze", "lat": 50.97135, "lon": 11.01139}, {"name": "Hauptbahnhof", "gruppe": "Plätze", "lat": 50.97277, "lon": 11.03789}, {"name": "Hirschgarten / Staatskanzlei", "gruppe": "Plätze", "lat": 50.97357, "lon": 11.02882}, {"name": "Juri-Gagarin-Ring / Theater", "gruppe": "Plätze", "lat": 50.97455, "lon": 11.01792}, {"name": "Krämerbrücke", "gruppe": "Plätze", "lat": 50.97875, "lon": 11.03094}, {"name": "Leipziger Platz", "gruppe": "Plätze", "lat": 50.98135, "lon": 11.04178}, {"name": "Nordstrand", "gruppe": "Plätze", "lat": 50.99855, "lon": 11.05187}, {"name": "Petersberg", "gruppe": "Plätze", "lat": 50.97881, "lon": 11.01862}, {"name": "Stadtpark", "gruppe": "Plätze", "lat": 50.97012, "lon": 11.03843}, {"name": "Wenigemarkt", "gruppe": "Plätze", "lat": 50.97863, "lon": 11.032}, {"name": "Agentur für Arbeit", "gruppe": "Institutionen", "lat": 50.95956, "lon": 11.04451}, {"name": "Bundesarbeitsgericht", "gruppe": "Institutionen", "lat": 50.97748, "lon": 11.01457}, {"name": "FH Leipziger Straße", "gruppe": "Institutionen", "lat": 50.99156, "lon": 11.05475}, {"name": "FH Schlüterstraße", "gruppe": "Institutionen", "lat": 50.9855, "lon": 11.02445}, {"name": "Fachhochschule (Altonaer Str.)", "gruppe": "Institutionen", "lat": 50.98502, "lon": 11.04276}, {"name": "Flughafen Erfurt-Weimar", "gruppe": "Institutionen", "lat": 50.97927, "lon": 10.95865}, {"name": "Hauptfriedhof", "gruppe": "Institutionen", "lat": 50.97294, "lon": 10.99332}, {"name": "Helios Klinikum", "gruppe": "Institutionen", "lat": 50.99268, "lon": 11.01345}, {"name": "IHK Erfurt", "gruppe": "Institutionen", "lat": 50.96339, "lon": 11.03296}, {"name": "Justizzentrum / Arbeitsgericht", "gruppe": "Institutionen", "lat": 50.97561, "lon": 11.01376}, {"name": "MDR Landesfunkhaus / KiKA", "gruppe": "Institutionen", "lat": 50.96226, "lon": 10.99576}, {"name": "Messe Erfurt", "gruppe": "Institutionen", "lat": 50.95932, "lon": 10.98967}, {"name": "Sparkasse Hauptverwaltung", "gruppe": "Institutionen", "lat": 50.97139, "lon": 11.01698}, {"name": "Stadtwerke Erfurt", "gruppe": "Institutionen", "lat": 50.98981, "lon": 11.02787}, {"name": "Steigerwaldstadion", "gruppe": "Institutionen", "lat": 50.96016, "lon": 11.03728}, {"name": "Thüringenpark", "gruppe": "Institutionen", "lat": 51.00927, "lon": 10.99434}, {"name": "Thüringer Landtag", "gruppe": "Institutionen", "lat": 50.96398, "lon": 11.03442}, {"name": "Thüringer Zoopark", "gruppe": "Institutionen", "lat": 51.02324, "lon": 11.02359}, {"name": "Universität Erfurt", "gruppe": "Institutionen", "lat": 50.98921, "lon": 11.00902}, {"name": "egapark", "gruppe": "Institutionen", "lat": 50.96477, "lon": 10.99765}, {"name": "Andreasvorstadt", "gruppe": "Stadtteile", "lat": 50.98813, "lon": 11.01206}, {"name": "Brühlervorstadt", "gruppe": "Stadtteile", "lat": 50.97161, "lon": 10.99822}, {"name": "Daberstedt", "gruppe": "Stadtteile", "lat": 50.96683, "lon": 11.05176}, {"name": "Herrenberg", "gruppe": "Stadtteile", "lat": 50.95779, "lon": 11.06652}, {"name": "Hochheim", "gruppe": "Stadtteile", "lat": 50.9566, "lon": 11.00048}, {"name": "Ilversgehofen", "gruppe": "Stadtteile", "lat": 50.99885, "lon": 11.03065}, {"name": "Johannesvorstadt", "gruppe": "Stadtteile", "lat": 50.99102, "lon": 11.04317}, {"name": "Krämpfervorstadt", "gruppe": "Stadtteile", "lat": 50.981, "lon": 11.04617}, {"name": "Löbervorstadt", "gruppe": "Stadtteile", "lat": 50.96425, "lon": 11.02666}, {"name": "Marbach", "gruppe": "Stadtteile", "lat": 50.99679, "lon": 10.98758}, {"name": "Melchendorf", "gruppe": "Stadtteile", "lat": 50.95013, "lon": 11.07053}, {"name": "Moskauer Platz", "gruppe": "Stadtteile", "lat": 51.0117, "lon": 10.99915}, {"name": "Rieth", "gruppe": "Stadtteile", "lat": 51.0041, "lon": 11.01491}, {"name": "Roter Berg", "gruppe": "Stadtteile", "lat": 51.01798, "lon": 11.02121}, {"name": "Wiesenhügel", "gruppe": "Stadtteile", "lat": 50.95148, "lon": 11.06232}]};
   var RINGE = [500, 1000, 2000, 5000];
   var GEH = [5, 10, 15, 30];                 // Minuten zu Fuß -> Meter (80 m/min)
   var S = { ort: 0, radius: 1000, veg: false, zaehl: "beides" };
@@ -227,13 +255,80 @@ svg { display: block; width: 100%; height: auto; }
 
   function render() {
     $("grid").innerHTML = vA() + vB() + vC() + vD() + vE() + vF() + vG() + vH();
-    $("ort").value = String(S.ort); $("veg").checked = S.veg;
+    $("veg").checked = S.veg;
+    if (document.activeElement !== $("ortq")) $("ortq").value = DATA.orte[S.ort].name;
     Array.prototype.forEach.call(document.querySelectorAll("[data-zaehl]"), function (b) { b.setAttribute("aria-pressed", String(S.zaehl === b.dataset.zaehl)); });
   }
   function setR(v) { S.radius = v === "alle" || v == null ? null : +v; render(); }
 
-  $("ort").innerHTML = DATA.orte.map(function (o, i) { return '<option value="' + i + '">' + esc(o.name) + "</option>"; }).join("");
-  $("ort").addEventListener("change", function () { S.ort = +this.value; render(); });
+  // ---- Orts-Suggest ---------------------------------------------------------
+  var STANDORT = -1;
+  function norm(t) { return String(t).toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss").normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
+  function mark(name, q) {
+    var n = norm(q.trim()); if (!n) return esc(name);
+    // Treffer im Originaltext markieren (über die normalisierte Form gesucht)
+    var low = name.toLowerCase(), plain = q.trim().toLowerCase(), i = low.indexOf(plain);
+    if (i < 0) return esc(name);
+    return esc(name.slice(0, i)) + "<mark>" + esc(name.slice(i, i + plain.length)) + "</mark>" + esc(name.slice(i + plain.length));
+  }
+  var sug = { items: [], idx: -1 };
+  function suggest(q) {
+    var n = norm(q.trim()), list = DATA.orte.map(function (o, i) { return { i: i, name: o.name, sub: o.gruppe }; });
+    var me = { i: STANDORT, name: "📍 Mein Standort", sub: "Browser" };
+    if (!n) return [me].concat(list.slice(0, 7));
+    var a = [], b = [];
+    list.forEach(function (o) {
+      var nn = norm(o.name);
+      if (nn.indexOf(n) === 0 || nn.split(/[\s/()-]+/).some(function (w) { return w.indexOf(n) === 0; })) a.push(o);
+      else if ((nn + " " + norm(o.sub)).indexOf(n) >= 0) b.push(o);
+    });
+    var res = a.concat(b);
+    if ("mein standort".indexOf(n) === 0 || "standort".indexOf(n) === 0) res.unshift(me);
+    return res.slice(0, 8);
+  }
+  function showSug() {
+    var q = $("ortq").value, ul = $("ortlist");
+    sug.items = suggest(q); sug.idx = sug.items.length ? 0 : -1;
+    ul.innerHTML = sug.items.length ? sug.items.map(function (o, k) {
+      return '<li role="option" id="o-' + k + '" data-k="' + k + '" aria-selected="' + (k === sug.idx) + '"><span>' + mark(o.name, q) + "</span><small>" + esc(o.sub) + "</small></li>";
+    }).join("") : '<li class="combo-empty">Kein Ort gefunden. Später übernimmt das euer Adress-Suggest.</li>';
+    ul.hidden = false; $("ortq").setAttribute("aria-expanded", "true");
+    $("ortq").setAttribute("aria-activedescendant", sug.idx >= 0 ? "o-" + sug.idx : "");
+  }
+  function hideSug() { $("ortlist").hidden = true; $("ortq").setAttribute("aria-expanded", "false"); $("ortq").removeAttribute("aria-activedescendant"); }
+  function moveSug(d) {
+    if (!sug.items.length) return;
+    sug.idx = (sug.idx + d + sug.items.length) % sug.items.length;
+    Array.prototype.forEach.call($("ortlist").querySelectorAll("li[role=option]"), function (li, k) { li.setAttribute("aria-selected", String(k === sug.idx)); if (k === sug.idx) li.scrollIntoView({ block: "nearest" }); });
+    $("ortq").setAttribute("aria-activedescendant", "o-" + sug.idx);
+  }
+  function pick(o) {
+    hideSug(); $("orthint").className = "hint";
+    if (o.i === STANDORT) {
+      if (!navigator.geolocation) { $("orthint").textContent = "Dein Browser gibt keinen Standort frei."; $("orthint").className = "hint err"; return; }
+      $("ortq").value = "Standort wird ermittelt …";
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        DATA.orte.push({ name: "Mein Standort", gruppe: "Browser", lat: pos.coords.latitude, lon: pos.coords.longitude });
+        S.ort = DATA.orte.length - 1; $("ortq").value = "Mein Standort"; $("ortx").hidden = false; render();
+      }, function () {
+        $("ortq").value = DATA.orte[S.ort].name; $("orthint").textContent = "Standort nicht verfügbar. Bitte einen Ort aus der Liste wählen."; $("orthint").className = "hint err";
+      }, { timeout: 10000, maximumAge: 300000 });
+      return;
+    }
+    S.ort = o.i; $("ortq").value = o.name; $("ortx").hidden = false; render();
+  }
+  $("ortq").value = DATA.orte[S.ort].name; $("ortx").hidden = false;
+  $("ortq").addEventListener("input", function () { $("ortx").hidden = !this.value; showSug(); });
+  $("ortq").addEventListener("focus", function () { this.select(); var v = this.value; this.value = ""; showSug(); this.value = v; this.select(); });
+  $("ortq").addEventListener("blur", function () { setTimeout(function () { hideSug(); if (document.activeElement !== $("ortq")) $("ortq").value = DATA.orte[S.ort].name; }, 150); });
+  $("ortq").addEventListener("keydown", function (e) {
+    if (e.key === "ArrowDown") { e.preventDefault(); if ($("ortlist").hidden) showSug(); else moveSug(1); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); moveSug(-1); }
+    else if (e.key === "Enter") { e.preventDefault(); if (sug.idx >= 0) pick(sug.items[sug.idx]); }
+    else if (e.key === "Escape") { hideSug(); this.value = DATA.orte[S.ort].name; }
+  });
+  $("ortlist").addEventListener("mousedown", function (e) { var li = e.target.closest("li[data-k]"); if (li) { e.preventDefault(); pick(sug.items[+li.dataset.k]); } });
+  $("ortx").addEventListener("click", function () { $("ortq").value = ""; $("ortq").focus(); showSug(); });
   $("veg").addEventListener("change", function () { S.veg = this.checked; render(); });
   document.addEventListener("click", function (e) {
     var t = e.target.closest("[data-r], [data-zaehl]"); if (!t || t.disabled) return;
