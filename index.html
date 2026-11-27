@@ -88,12 +88,19 @@ h1 span { color: var(--accent); }
 .search input {
   width: 100%; font: inherit; font-size: 1.05rem; color: var(--ink);
   background: var(--surface); border: 1.5px solid var(--line); border-radius: 999px;
-  padding: 12px 44px 12px 44px; outline: none;
+  padding: 12px 92px 12px 20px; outline: none;
 }
 .search input:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
-.search svg { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--muted); }
+.search input::-webkit-search-cancel-button { display: none; }
+.search button.go {
+  position: absolute; right: 5px; top: 50%; transform: translateY(-50%); display: grid; place-items: center;
+  border: 0; background: var(--accent); color: var(--accent-ink); width: 40px; height: 40px; border-radius: 50%; cursor: pointer;
+}
+.search button.go:hover { filter: brightness(1.08); }
+.search button.go:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 40%, transparent); outline-offset: 2px; }
+.search button.go svg { width: 18px; height: 18px; }
 .search button.clear {
-  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  position: absolute; right: 52px; top: 50%; transform: translateY(-50%);
   border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 1.3rem; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
 }
 .search button.clear:hover { background: var(--line); }
@@ -256,6 +263,10 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
 .combo-list li small { color: var(--muted); font-size: 0.75rem; white-space: nowrap; }
 .combo-list li[aria-selected="true"], .combo-list li:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .combo-empty { color: var(--muted); cursor: default !important; }
+#qlist { top: calc(100% + 4px); text-align: left; }
+#qlist li { justify-content: flex-start; align-items: center; gap: 10px; font-size: 1rem; padding: 9px 12px; }
+#qlist li svg { flex: none; width: 16px; height: 16px; color: var(--muted); }
+#qlist li b { font-weight: 700; }
 </style>
 </head>
 <body>
@@ -266,9 +277,10 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
       <p class="tagline">Erfurts Kantinen auf einen Blick</p>
     </div>
     <div class="search">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
-      <input id="q" type="search" placeholder="Gericht suchen, z. B. Schnitzel, Curry, Lachs" autocomplete="off" aria-label="Gericht suchen">
+      <input id="q" type="search" enterkeyhint="search" placeholder="Gericht suchen, z. B. Schnitzel, Curry, Lachs" autocomplete="off" aria-label="Gericht suchen" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="qlist">
       <button class="clear" id="clear" type="button" aria-label="Suche leeren" hidden>×</button>
+      <button class="go" id="go" type="button" aria-label="Suchen" title="Suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></button>
+      <ul id="qlist" class="combo-list" role="listbox" aria-label="Suchvorschläge" hidden></ul>
     </div>
     <nav class="days" id="days" aria-label="Tag wählen"></nav>
   </header>
@@ -311,6 +323,7 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
   // Alle Filter laufen über die QSC-Such-API. Der Browser baut nur die Anfrage und gruppiert die Anzeige.
   // ODER: f.<feld>=a&f.<feld>=b   UND: f.<feld>.and=a&f.<feld>.and=b
   var API = "https://qsc-dev.quasiris.de/api/v1/search/tbl/mittago";
+  var SUGGEST = "https://qsc-dev.quasiris.de/api/v1/search/suggest/tbl/mittago";
   var ANALYTICS = "https://qsc-dev.quasiris.de/api/v1/analytics/tbl/mittago";
   // ---- Quasiris-Tracking -----------------------------------------------------
   // Die Suche selbst zeichnet QSC im Backend auf. Von hier kommen die Kennungen (userId, sessionId, requestId)
@@ -334,7 +347,7 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
       return s.id;
     }
     return {
-      off: off, requestId: null, requestQ: null,
+      off: off, requestId: null, requestQ: null, pending: null,
       ids: function () { return { userId: userId(), sessionId: sessionId() }; },
       send: function (type, data) {
         if (off) return;
@@ -466,7 +479,10 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
     if (mitIds) {
       var ids = track.ids(); add("userId", ids.userId); add("sessionId", ids.sessionId);
       if (track.requestId && track.requestQ === q) add("requestId", track.requestId);
+      // Wie die Suche abgeschickt wurde, landet als Tag im Backend-Tracking: submit-enter, submit-button, submit-suggest
+      if (track.pending) add("tracking", "submit-" + track.pending.submitType);
     }
+    if (opts.anonym) add("tracking", "notracking"); // Anfragen mit eigenem Standort zeichnet das Backend gar nicht auf
     if (opts.tag) add("f.tag", opts.tag);
     (opts.merkmale || []).forEach(function (v) { add("f.merkmale.and", v); });
     (opts.ohne || []).forEach(function (v) { add("f.frei_von.and", v); });
@@ -485,6 +501,7 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
       return r.json();
     }).then(function (j) {
       track.requestId = mitIds && j && j.requestId ? j.requestId : null; track.requestQ = q;
+      if (track.pending) { var ev = track.pending; track.pending = null; track.send("search", ev); }
       var res = (j && j.result && j.result.mittago) || {};
       var facets = {};
       (res.facets || []).forEach(function (f) { facets[f.id] = f.values || []; });
@@ -720,7 +737,7 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
         html += '<h3 class="day-title">' + TAGE[d.getDay()] + ", " + fmtDay(s) + "</h3>" + group(byDay[s]);
       });
     } else html = group(r.docs);
-    if (!r.docs.length) html = '<div class="empty">' + (state.q ? "Nichts gefunden für „" + esc(state.q) + "“. " : "Für diese Auswahl gibt es kein Gericht. ") + "Filter lockern oder zurücksetzen.</div>";
+    if (!r.docs.length) html = '<div class="empty">' + (state.q ? "Nichts gefunden für „" + esc(state.q) + "“. " : "Für diese Auswahl gibt es kein Gericht. ") + "Filter lockern oder zurücksetzen." + (state.q && state.day !== "alle" ? ' <button type="button" class="day" data-day="alle" style="margin-left:6px">In der ganzen Woche suchen</button>' : "") + "</div>";
     $("status").className = "status";
     $("status").textContent = state.q ? r.total + " Treffer für „" + state.q + "“" : (r.total ? r.total + " Gerichte" : "");
     $("showres").textContent = r.total ? r.total + " Gerichte anzeigen" : "Keine Gerichte – Filter lockern";
@@ -751,7 +768,7 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
       if (now.getHours() >= 14) { var t = new Date(now); t.setDate(t.getDate() + 1); ab = iso(t); }
       state.defaultDay = state.tage.filter(function (s) { return s >= ab; })[0] || state.tage[state.tage.length - 1];
       state.day = state.defaultDay;
-      if (state.urlDay === "woche" || state.q) state.day = "alle";
+      if (state.urlDay === "woche") state.day = "alle";
       else if (state.urlDay && state.tage.indexOf(state.urlDay) >= 0) state.day = state.urlDay;
       if (state.q) { $("q").value = state.q; $("clear").hidden = false; }
       if (state.ort === "standort") { setOrt("standort", true); return; }
@@ -764,17 +781,72 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
   }
 
   // ---- Interaktion -----------------------------------------------------------
-  var timer = null, lastDay = null;
+  // Die Trefferliste ändert sich nur beim Abschicken: Enter, Such-Button oder Klick auf einen Vorschlag.
+  // Beim Tippen aktualisieren sich nur die Vorschläge.
+  function suche(q, via, extra) {
+    q = (q || "").trim();
+    qsHide(); $("q").value = q; $("clear").hidden = !q;
+    if (q === state.q) return;
+    // Abgeschickte Suche als Ereignis melden, sobald die Antwort (und ihre requestId) da ist
+    // submitType/typedQuery sind Standardfelder ab QSC-2616; bis das Backend ausgerollt ist, zusätzlich in additional
+    if (q) { track.pending = { submitType: via || "enter", additional: { via: via || "enter" } }; for (var k in extra) track.pending[k] = extra[k]; }
+    else track.pending = null;
+    state.q = q; load();
+  }
   $("q").addEventListener("input", function () {
-    var q = $("q").value.trim();
-    $("clear").hidden = !q;
-    clearTimeout(timer);
-    timer = setTimeout(function () {
-      if (q && !state.q) { lastDay = state.day; state.day = "alle"; }
-      if (!q && state.q && lastDay) { state.day = lastDay; lastDay = null; }
-      state.q = q; load();
-    }, 250);
+    $("clear").hidden = !$("q").value;
+    vorschlaege($("q").value);
   });
+
+  // ---- Suchvorschläge (QSC-Suggest-API) --------------------------------------
+  var qs = { items: [], idx: -1, seq: 0, timer: null };
+  var LUPE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>';
+  function qsHide() { qs.items = []; qs.idx = -1; qs.seq++; clearTimeout(qs.timer); $("qlist").hidden = true; $("q").setAttribute("aria-expanded", "false"); $("q").removeAttribute("aria-activedescendant"); }
+  function qsRender(typed) {
+    var t = typed.toLowerCase();
+    $("qlist").innerHTML = qs.items.map(function (v, i) {
+      var text = v.toLowerCase().indexOf(t) === 0 ? esc(v.slice(0, t.length)) + "<b>" + esc(v.slice(t.length)) + "</b>" : esc(v);
+      return '<li role="option" id="qs-' + i + '" data-qs="' + i + '" aria-selected="' + (i === qs.idx) + '">' + LUPE + "<span>" + text + "</span></li>";
+    }).join("");
+    $("qlist").hidden = false; $("q").setAttribute("aria-expanded", "true");
+  }
+  function vorschlaege(raw) {
+    var typed = raw.replace(/^\s+/, "");
+    clearTimeout(qs.timer);
+    if (typed.trim().length < 2) { qsHide(); return; }
+    var my = ++qs.seq;
+    qs.timer = setTimeout(function () {
+      fetch(SUGGEST + "?q=" + encodeURIComponent(typed)).then(function (r) { return r.ok ? r.json() : []; }).then(function (j) {
+        if (my !== qs.seq || document.activeElement !== $("q")) return;
+        var norm = typed.trim().toLowerCase();
+        qs.items = (j || []).map(function (x) { return x && x.suggest; }).filter(function (v) { return v && v.toLowerCase() !== norm; }).slice(0, 6);
+        qs.idx = -1;
+        if (qs.items.length) qsRender(typed); else qsHide();
+      }).catch(function () {});
+    }, 120);
+  }
+  function qsPick(i) {
+    var v = qs.items[i]; if (!v) return;
+    var typed = $("q").value.trim();
+    suche(v, "suggest", { selectedQuery: v, typedQuery: typed, position: i + 1 });
+    if (track.pending) track.pending.additional.typedQuery = typed;
+  }
+  $("q").addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape" && !$("qlist").hidden) { ev.preventDefault(); qsHide(); return; }
+    if (ev.key === "Enter") { ev.preventDefault(); if (qs.idx >= 0) qsPick(qs.idx); else suche($("q").value, "enter"); return; }
+    if (ev.key !== "ArrowDown" && ev.key !== "ArrowUp") return;
+    if ($("qlist").hidden || !qs.items.length) return;
+    ev.preventDefault();
+    var n = qs.items.length, d = ev.key === "ArrowDown" ? 1 : -1;
+    qs.idx = qs.idx < 0 ? (d > 0 ? 0 : n - 1) : (qs.idx + d + n + 1) % (n + 1) === n ? -1 : (qs.idx + d + n + 1) % (n + 1);
+    Array.prototype.forEach.call($("qlist").children, function (li, i) { li.setAttribute("aria-selected", String(i === qs.idx)); });
+    if (qs.idx >= 0) $("q").setAttribute("aria-activedescendant", "qs-" + qs.idx); else $("q").removeAttribute("aria-activedescendant");
+  });
+  $("qlist").addEventListener("mousedown", function (ev) {
+    var li = ev.target.closest("li[data-qs]");
+    if (li) { ev.preventDefault(); qsPick(+li.dataset.qs); }
+  });
+  $("q").addEventListener("blur", function () { setTimeout(qsHide, 100); });
 
   var LIST = { merkmale: "merkmale", frei_von: "ohne", zutaten: "zutaten", gerichtstyp: "typ", kantine: "kantinen" };
   function toggle(f, v) {
@@ -820,7 +892,7 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
   document.addEventListener("click", function (ev) {
     var b = ev.target.closest("button");
     if (!b || b.disabled) return;
-    if (b.dataset.day) { track.send("clickFacet", { facetId: "tag", facetValue: b.dataset.day }); state.day = b.dataset.day; lastDay = null; load(); }
+    if (b.dataset.day) { track.send("clickFacet", { facetId: "tag", facetValue: b.dataset.day }); state.day = b.dataset.day; load(); }
     else if (b.dataset.rm) {
       if (b.dataset.rm === "umkreis") { state.ort = null; state.here = null; }
       else if (b.dataset.rm === "preis" || b.dataset.rm === "kcal") state[b.dataset.rm] = null; else toggle(b.dataset.rm, b.dataset.v);
@@ -838,7 +910,8 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
     else if (b.dataset.gruppe) { state.gruppe = b.dataset.gruppe; writeState(); renderFilters(last ? last.facets : {}); if (last) renderList(last); }
     else if (b.id === "openside") openSide(true);
     else if (b.id === "closeside" || b.id === "showres") openSide(false);
-    else if (b.id === "clear") { $("q").value = ""; $("q").dispatchEvent(new Event("input")); $("q").focus(); }
+    else if (b.id === "clear") { suche(""); $("q").focus(); }
+    else if (b.id === "go") suche($("q").value, "button");
   });
 
   // Slider: beim Ziehen nur Anzeige, beim Loslassen QSC fragen
@@ -872,7 +945,7 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
     if (!a) return;
     var alle = document.querySelectorAll("#list .dish"), pos = 0;
     for (var i = 0; i < alle.length; i++) if (alle[i].dataset.id === a.dataset.doc) { pos = i + 1; break; }
-    track.send("clickDocument", { docId: a.dataset.doc, position: pos || 1, additional: { kantine: a.dataset.kantine, ziel: "original-speiseplan" } });
+    track.send("clickDocument", { docId: a.dataset.doc, position: pos || 1, attributes: { kantine: a.dataset.kantine, ziel: "original-speiseplan" }, additional: { kantine: a.dataset.kantine, ziel: "original-speiseplan" } });
   });
 
   init();
