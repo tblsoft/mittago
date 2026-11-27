@@ -301,7 +301,7 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
     <div>Daten aus den Speiseplänen der Kantinen. Angaben ohne Gewähr. Der Preisfilter nutzt den Gästepreis; angezeigt wird der Preis der gewählten Gruppe.</div>
     <div>Kalorien mit „ca.“ sind geschätzt. „Frei von“ nur, wo die Kantine Allergene angibt. Allergene bitte vor Ort prüfen.</div>
     <div>„vermutlich vegetarisch“ heißt: im Namen kein Fleisch erkannt.</div>
-    <div>Suche powered by Quasiris Search Cloud.</div>
+    <div>Suche powered by Quasiris Search Cloud. Zur Verbesserung der Suche werden Suchanfragen, Filter und Klicks mit zufälligen Kennungen ausgewertet, ohne Namen. Mit „Mein Standort“ wird ohne Kennung gesucht. Abschalten: „Do Not Track“ im Browser aktivieren.</div>
   </footer>
 </div>
 
@@ -311,6 +311,42 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
   // Alle Filter laufen über die QSC-Such-API. Der Browser baut nur die Anfrage und gruppiert die Anzeige.
   // ODER: f.<feld>=a&f.<feld>=b   UND: f.<feld>.and=a&f.<feld>.and=b
   var API = "https://qsc-dev.quasiris.de/api/v1/search/tbl/mittago";
+  var ANALYTICS = "https://qsc-dev.quasiris.de/api/v1/analytics/tbl/mittago";
+  // ---- Quasiris-Tracking -----------------------------------------------------
+  // Die Suche selbst zeichnet QSC im Backend auf. Von hier kommen die Kennungen (userId, sessionId, requestId)
+  // und die Ereignisse, die das Backend nicht sieht: visit, clickFacet, clickDocument.
+  // Zufalls-IDs ohne Personenbezug. Aus bei "Do Not Track" / Global Privacy Control.
+  var track = (function () {
+    var off = navigator.doNotTrack === "1" || window.doNotTrack === "1" || navigator.globalPrivacyControl === true;
+    var mem = {};
+    function get(k) { try { return localStorage.getItem(k); } catch (e) { return mem[k] || null; } }
+    function set(k, v) { try { localStorage.setItem(k, v); } catch (e) { mem[k] = v; } }
+    function uuid() {
+      if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+      return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) { var r = Math.random() * 16 | 0; return (c === "x" ? r : r & 3 | 8).toString(16); });
+    }
+    function userId() { var u = get("mittago.uid"); if (!u) { u = uuid(); set("mittago.uid", u); } return u; }
+    function sessionId() { // neue Sitzung nach 30 Minuten ohne Aktivität
+      var s = null, now = Date.now();
+      try { s = JSON.parse(get("mittago.sid") || "null"); } catch (e) {}
+      if (!s || !s.id || now - s.t > 30 * 60000) s = { id: uuid() };
+      s.t = now; set("mittago.sid", JSON.stringify(s));
+      return s.id;
+    }
+    return {
+      off: off, requestId: null, requestQ: null,
+      ids: function () { return { userId: userId(), sessionId: sessionId() }; },
+      send: function (type, data) {
+        if (off) return;
+        try {
+          var ev = this.ids(); ev.type = type;
+          if (type !== "visit") { ev.q = this.requestQ || "*"; ev.page = 1; if (this.requestId) ev.requestId = this.requestId; }
+          for (var k in data) ev[k] = data[k];
+          fetch(ANALYTICS, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(ev), keepalive: true }).catch(function () {});
+        } catch (e) {}
+      }
+    };
+  })();
   var TAGE = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
   var LABEL = {
     merkmale: { "vegetarisch": "Vegetarisch", "vegan": "Vegan", "pescetarisch": "Pescetarisch", "ohne-schwein": "Ohne Schwein", "ohne-alkohol": "Ohne Alkohol", "fisch": "Fisch", "gefluegel": "Geflügel" },
@@ -421,8 +457,16 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
     return out;
   }
   function query(opts) {
-    var p = ["q=" + encodeURIComponent(opts.q || "*"), "rows=" + (opts.rows == null ? 200 : opts.rows)];
+    var q = opts.q || "*";
+    var p = ["q=" + encodeURIComponent(q), "rows=" + (opts.rows == null ? 200 : opts.rows)];
     var add = function (k, v) { p.push(k + "=" + encodeURIComponent(v)); };
+    // Tracking-Kennungen: requestId bleibt, solange der Suchbegriff gleich ist (Filtern, Tag wechseln).
+    // Mit "Mein Standort" geht die Anfrage ohne Kennungen raus, damit der Standort an keiner ID hängt.
+    var mitIds = !track.off && !opts.anonym;
+    if (mitIds) {
+      var ids = track.ids(); add("userId", ids.userId); add("sessionId", ids.sessionId);
+      if (track.requestId && track.requestQ === q) add("requestId", track.requestId);
+    }
     if (opts.tag) add("f.tag", opts.tag);
     (opts.merkmale || []).forEach(function (v) { add("f.merkmale.and", v); });
     (opts.ohne || []).forEach(function (v) { add("f.frei_von.and", v); });
@@ -440,6 +484,7 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function (j) {
+      track.requestId = mitIds && j && j.requestId ? j.requestId : null; track.requestQ = q;
       var res = (j && j.result && j.result.mittago) || {};
       var facets = {};
       (res.facets || []).forEach(function (f) { facets[f.id] = f.values || []; });
@@ -449,7 +494,8 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
   function current() {
     return { q: state.q, tag: state.day === "alle" ? null : state.day, merkmale: state.merkmale, ohne: state.ohne,
       zutaten: state.zutaten, typ: state.typ, kantinen: state.kantinen, preis: state.preis, kcal: state.kcal,
-      geo: state.ort && state.here ? { lat: state.here[0], lon: state.here[1], r: state.radius } : null };
+      geo: state.ort && state.here ? { lat: state.here[0], lon: state.here[1], r: state.radius } : null,
+      anonym: state.ort === "standort" };
   }
   function count(facet, value) {
     for (var i = 0; i < (facet || []).length; i++) if (facet[i].value === value) return facet[i].count;
@@ -643,7 +689,7 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
     var kcal = d.kcal ? '<span class="sub">' + (d.kcal_geschaetzt ? "ca. " : "") + d.kcal + " kcal</span>" : "";
     var al = (d.allergene_liste || []).map(function (a) { return LABEL.allergene[a] || a; });
     var allerg = al.length ? '<span class="allerg">enthält: ' + esc(al.join(", ")) + "</span>" : "";
-    return '<div class="dish"><div class="name">' + highlight(d.gericht) + '</div><div class="price">' + euro(preis) +
+    return '<div class="dish" data-id="' + esc(d.id) + '"><div class="name">' + highlight(d.gericht) + '</div><div class="price">' + euro(preis) +
       '</div><div class="meta"><span class="tag ' + t[0] + '">' + t[1] + '</span><span class="sub">' + esc(d.kategorie) + " · " + esc(d.preis_text) + "</span>" + kcal + allerg + "</div></div>";
   }
   function group(items) {
@@ -656,7 +702,7 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
     }).forEach(function (id) {
       var k = meta[id], d = dist(id);
       g[id].sort(function (a, b) { return a.id.localeCompare(b.id, "de", { numeric: true }); });
-      var link = k.quelle ? '<a href="' + esc(k.quelle) + '" target="_blank" rel="noopener">Original-Speiseplan ↗</a>' : "";
+      var link = k.quelle ? '<a href="' + esc(k.quelle) + '" target="_blank" rel="noopener" data-doc="' + esc(g[id][0].id) + '" data-kantine="' + esc(id) + '">Original-Speiseplan ↗</a>' : "";
       var where = '<span class="where">' + (d != null ? '<b>' + fmtKm(d) + "</b> · " : "") + esc(k.adresse || "") + "</span>";
       out += '<section class="tray"><div class="tray-head"><div><h2>' + esc(k.kantine) + "</h2>" + where + "</div>" + link + "</div>" + g[id].map(dishHtml).join("") + "</section>";
     });
@@ -697,6 +743,7 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
   }
 
   function init() {
+    track.send("visit", { docId: "startseite" });
     query({ rows: 0 }).then(function (r) {
       state.tage = (r.facets.tag || []).map(function (v) { return v.value; }).sort();
       if (!state.tage.length) { $("status").textContent = "Gerade sind keine Speisepläne verfügbar."; return; }
@@ -707,7 +754,7 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
       if (state.urlDay === "woche" || state.q) state.day = "alle";
       else if (state.urlDay && state.tage.indexOf(state.urlDay) >= 0) state.day = state.urlDay;
       if (state.q) { $("q").value = state.q; $("clear").hidden = false; }
-      if (state.ort === "standort") { setOrt("standort"); return; }
+      if (state.ort === "standort") { setOrt("standort", true); return; }
       if (state.ort) { var o = ortById(state.ort); if (o && o[3] != null) state.here = [o[3], o[4]]; else state.ort = null; }
       load();
     }).catch(function (e) {
@@ -734,9 +781,10 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
     var arr = state[LIST[f]], i = arr.indexOf(v);
     if (i >= 0) arr.splice(i, 1); else arr.push(v);
   }
-  function setOrt(id) {
+  function setOrt(id, start) {
     state.geoError = null;
     if (!id) { state.ort = null; state.here = null; load(); return; }
+    if (!start) track.send("clickFacet", { facetId: "umkreis", facetValue: id + ":" + state.radius + "km" }); // nur die Auswahl, nie Koordinaten
     if (id === "standort") {
       if (!navigator.geolocation) { state.geoError = "Dein Browser gibt keinen Standort frei."; state.ort = null; load(); return; }
       state.ort = "standort"; $("status").textContent = "Standort wird ermittelt …";
@@ -753,7 +801,10 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
   // Checkboxen in der Seitenleiste
   document.addEventListener("change", function (ev) {
     var t = ev.target;
-    if (t.type === "checkbox" && t.dataset.f && LIST[t.dataset.f]) { toggle(t.dataset.f, t.dataset.v); load(); }
+    if (t.type === "checkbox" && t.dataset.f && LIST[t.dataset.f]) {
+      if (t.checked) track.send("clickFacet", { facetId: t.dataset.f, facetValue: t.dataset.v });
+      toggle(t.dataset.f, t.dataset.v); load();
+    }
   });
   // Offen/zu der Abschnitte merken
   document.addEventListener("toggle", function (ev) {
@@ -769,14 +820,18 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
   document.addEventListener("click", function (ev) {
     var b = ev.target.closest("button");
     if (!b || b.disabled) return;
-    if (b.dataset.day) { state.day = b.dataset.day; lastDay = null; load(); }
+    if (b.dataset.day) { track.send("clickFacet", { facetId: "tag", facetValue: b.dataset.day }); state.day = b.dataset.day; lastDay = null; load(); }
     else if (b.dataset.rm) {
       if (b.dataset.rm === "umkreis") { state.ort = null; state.here = null; }
       else if (b.dataset.rm === "preis" || b.dataset.rm === "kcal") state[b.dataset.rm] = null; else toggle(b.dataset.rm, b.dataset.v);
       load();
     }
     else if (b.id === "clearall") { state.merkmale = []; state.ohne = []; state.zutaten = []; state.typ = []; state.kantinen = []; state.preis = null; state.kcal = null; state.ort = null; state.here = null; load(); }
-    else if (b.dataset.radius) { state.radius = parseFloat(b.dataset.radius); load(); }
+    else if (b.dataset.radius) {
+      state.radius = parseFloat(b.dataset.radius);
+      if (state.ort) track.send("clickFacet", { facetId: "umkreis", facetValue: state.ort + ":" + state.radius + "km" });
+      load();
+    }
     else if (b.id === "ortx") { setOrt(""); }
     else if (b.dataset.showall) { SHOWALL[b.dataset.showall] = true; renderFilters(last ? last.facets : {}); }
     else if (b.dataset.showless) { SHOWALL[b.dataset.showless] = false; renderFilters(last ? last.facets : {}); }
@@ -808,7 +863,16 @@ details.fs > summary .n { margin-left: auto; margin-right: 4px; background: var(
   document.addEventListener("change", function (ev) {
     if (!ev.target.dataset || !ev.target.dataset.r) return;
     var s = sliderValue(ev.target);
+    if (s.val) track.send("clickFacet", { facetId: s.cfg.field, facetValue: s.val[0] + "-" + s.val[1] });
     state[s.key] = s.val; load();
+  });
+  // Klick auf den Original-Speiseplan einer Kantine = Klick auf einen Treffer (erstes Gericht der Kantine)
+  document.addEventListener("click", function (ev) {
+    var a = ev.target.closest && ev.target.closest("a[data-doc]");
+    if (!a) return;
+    var alle = document.querySelectorAll("#list .dish"), pos = 0;
+    for (var i = 0; i < alle.length; i++) if (alle[i].dataset.id === a.dataset.doc) { pos = i + 1; break; }
+    track.send("clickDocument", { docId: a.dataset.doc, position: pos || 1, additional: { kantine: a.dataset.kantine, ziel: "original-speiseplan" } });
   });
 
   init();
